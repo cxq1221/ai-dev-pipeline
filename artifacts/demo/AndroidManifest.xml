@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Prototype placeholder only. This is not an installable Android package. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+  package="example.invalid.forge.prototype">
+  <application android:label="Forge Prototype Placeholder" />
+</manifest>
