@@ -15,7 +15,7 @@ function kaOptions(values,current){return values.map(x=>'<option '+(x===current?
 function kaThumb(a){return kaImage(a)?'<img class="ka-thumb" alt="" src="'+kaFileURL(a)+'">':'<span class="ka-thumb">'+esc(a.type==='外部链接'?'LINK':a.file?.name.split('.').pop().toUpperCase()||'FILE')+'</span>';}
 function kaList(){
  const items=knowledgeAssets.items.filter(a=>(kaUI.status==='全部'||a.archived===(kaUI.status==='已归档'))&&(kaUI.type==='全部'||a.type===kaUI.type)&&(kaUI.purpose==='全部'||a.purpose===kaUI.purpose)&&(a.name+' '+a.description+' '+a.refs.join(' ')).toLowerCase().includes(kaUI.query.toLowerCase()));
- return heading('WORKSPACE / KNOWLEDGE ASSETS','资产','需求参考资料，不是系统构建制品；上传不会自动成为开发指令。',kaButton('upload','＋ 上传文件')+' '+kaButton('link-new','＋ 添加链接'))+
+ return heading('WORKSPACE / KNOWLEDGE ASSETS','资产管理','需求参考资料，不是系统构建制品；上传不会自动成为开发指令。',kaButton('upload','＋ 上传文件')+' '+kaButton('link-new','＋ 添加链接'))+
  '<div class="ka-toolbar"><input id="ka-query" aria-label="搜索资产" placeholder="名称 / 说明 / 需求编号" value="'+esc(kaUI.query)+'"><select id="ka-type" aria-label="资产类型">'+kaOptions(['全部',...kaTypes],kaUI.type)+'</select><select id="ka-purpose" aria-label="资产用途">'+kaOptions(['全部',...kaPurposes],kaUI.purpose)+'</select><select id="ka-status" aria-label="资产状态">'+kaOptions(['在用','已归档','全部'],kaUI.status)+'</select>'+kaButton('filter','筛选')+'<span>'+items.length+' 项</span></div>'+
  '<div class="table-wrap"><table class="ka-table"><thead><tr><th>资产</th><th>类型 / 用途</th><th>所属范围 / 关联需求</th><th>上传人 / 更新时间</th><th>状态</th></tr></thead><tbody>'+items.map(a=>'<tr><td><div class="ka-title">'+kaThumb(a)+'<div><button class="ka-name" data-ka="detail" data-id="'+a.id+'">'+esc(a.name)+'</button><small>'+a.id+(a.sample?' · 预置示例':'')+'</small></div></div></td><td>'+esc(a.type)+'<small>'+esc(a.purpose)+'</small></td><td>'+esc(kaScopeLabel(a.scope))+'<small>'+a.refs.length+' 个需求引用</small></td><td>'+esc(a.uploader)+'<small>'+esc(new Date(a.updatedAt).toLocaleString('zh-CN'))+'</small></td><td>'+(a.archived?'已归档':'在用')+'</td></tr>').join('')+'</tbody></table></div>'+(!items.length?'<div class="ka-empty">暂无匹配资产，可上传文件或添加链接。</div>':'')+'<p class="ka-reference-note">文件仅保存在当前页面内存，刷新后清除。当前为管理员演示视角，权限继承仅模拟；请勿上传敏感资料。</p>';
 }
@@ -90,11 +90,11 @@ const renderBeforeKnowledgeAssets=render;
 render=function(){
  renderBeforeKnowledgeAssets();
  const nav=document.querySelector('.sidebar .nav');
- if(nav&&!nav.querySelector('[data-ka="home"]'))nav.insertAdjacentHTML('beforeend','<button data-ka="home" class="'+(vs.page==='knowledge-assets'?'active':'')+'"><span class="nav-icon" aria-hidden="true">'+sidebarIcon('panels-top-left')+'</span><span class="nav-text">资产</span></button>');
+ if(nav&&!nav.querySelector('[data-ka="home"]'))nav.insertAdjacentHTML('beforeend','<button data-ka="home" class="'+(vs.page==='knowledge-assets'?'active':'')+'"><span class="nav-icon" aria-hidden="true">'+sidebarIcon('panels-top-left')+'</span><span class="nav-text">资产管理</span></button>');
  if(vs.page==='knowledge-assets'){
   const content=document.querySelector('.content');if(!content)return;const id=location.hash.split('/')[2];
   try{content.innerHTML=id?kaDetail(knowledgeAssets.get(decodeURIComponent(id))):kaList();if(content.querySelector('.ka-pdf-view'))kaPDFPage(decodeURIComponent(id));}catch(error){content.innerHTML=kaButton('home','← 返回资产列表')+'<p class="ka-empty">'+esc(error.message)+'</p>';}
-  document.querySelector('.topbar').innerHTML='<strong>工作空间 / 资产</strong><span class="badge gray">本地内存 · 权限模拟</span>';
+  document.querySelector('.topbar').innerHTML='<strong>工作空间 / 资产管理</strong><span class="badge gray">本地内存 · 权限模拟</span>';
   return;
  }
  const req=kaCurrentReq();if(!req)return;
