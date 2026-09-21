@@ -1,0 +1,10 @@
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const context=vm.createContext({URL});
+vm.runInContext(fs.readFileSync(path.join(__dirname,'../assets-model.js'),'utf8'),context);
+const Library=vm.runInContext('KnowledgeAssetLibrary',context);
+const input={name:'设计稿',scope:'product:p-sdk',file:{name:'design.png',size:100}};
+test('files are independent assets without versions',()=>{const lib=new Library();const a=lib.add(input),b=lib.add(input);assert.notEqual(a.id,b.id);assert.equal(a.type,'图片');assert.equal('version' in a,false);});
+test('links reject scripts, credentials and non-http protocols',()=>{for(const url of ['javascript:alert(1)','file:///tmp/a','https://user:pass@example.org'])assert.throws(()=>Library.safeLink(url));assert.equal(Library.safeLink('https://example.org'),'https://example.org/');});
+test('references share assets, enforce scope and prevent deleting in-use assets',()=>{const lib=new Library(),a=lib.add(input);lib.link(a.id,'REQ-1',['p-sdk']);lib.link(a.id,'REQ-2',['p-sdk']);lib.link(a.id,'REQ-2',['p-sdk']);assert.equal(a.refs.length,2);assert.throws(()=>lib.link(a.id,'REQ-3',['p-cloud']));assert.throws(()=>lib.remove(a.id));lib.unlink(a.id,'REQ-1');assert.equal(lib.items.length,1);lib.unlink(a.id,'REQ-2');lib.remove(a.id);assert.equal(lib.items.length,0);});
+test('requirement scope stays fixed and archive preserves existing references',()=>{const lib=new Library(),a=lib.add({...input,scope:'requirement:REQ-1'});lib.link(a.id,'REQ-1');assert.throws(()=>lib.link(a.id,'REQ-2',['p-sdk']));lib.archive(a.id);assert.equal(a.refs.length,1);assert.throws(()=>lib.link(a.id,'REQ-1'));lib.archive(a.id);lib.link(a.id,'REQ-1');});
+test('oversized uploads and empty asset data are rejected',()=>{const lib=new Library();assert.throws(()=>lib.add({...input,file:{name:'big.pdf',size:51*1024*1024}}));assert.throws(()=>lib.add({...input,file:null}));});
