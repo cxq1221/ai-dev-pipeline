@@ -589,4 +589,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.querySelec
 if(location.hash.startsWith('#/api-docs/')||location.hash.startsWith('#/artifact-preview/'))vs.page='artifact-view';else if(location.hash.startsWith('#/artifacts'))vs.page='artifacts';else{const artifactVersion=location.hash.match(/^#\/versions\/([^/]+)\/artifacts$/);if(artifactVersion&&versions.some(v=>v.id===decodeURIComponent(artifactVersion[1]))){vs.version=decodeURIComponent(artifactVersion[1]);vs.page='version';vs.tab='制品管理';vs.build=V().builds.at(-1)?.n}}
 render();
 </script>
+<link rel="stylesheet" href="knowledge-assets.css">
+<script src="assets-model.js"></script>
+<script src="knowledge-assets.js"></script>
 </body></html>
