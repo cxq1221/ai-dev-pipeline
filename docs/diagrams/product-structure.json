@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {"title": "Forge · 产品模块协作", "locale": "zh-CN", "quality_profile": "showcase", "viewBox": [1100, 650], "legend": {"mode": "hidden"}},
+  "components": [
+    {"id":"requirements","type":"frontend","label":"统一需求池","sublabel":"业务诉求 · 平台任务","pos":[60,280],"size":[220,84]},
+    {"id":"versions","type":"frontend","label":"版本工作台","sublabel":"需求开发 · 提交 · 构建 · 测试","pos":[430,280],"size":[240,84]},
+    {"id":"artifacts","type":"frontend","label":"制品管理","sublabel":"候选包 · 已发布包 · API 文档","pos":[820,280],"size":[240,84]},
+    {"id":"assets","type":"frontend","label":"资产管理","sublabel":"截图 · 文件 · 需求参考资料","pos":[60,60],"size":[220,84]},
+    {"id":"repos","type":"frontend","label":"仓库配置","sublabel":"服务映射 · 分支 · 运行配置","pos":[430,60],"size":[240,84]},
+    {"id":"resources","type":"frontend","label":"测试资源","sublabel":"环境 · 设备 · 系统测试用例集","pos":[430,520],"size":[240,84]}
+  ],
+  "connections": [
+    {"from":"requirements","to":"versions","label":"任务纳入版本","variant":"emphasis"},
+    {"from":"versions","to":"artifacts","label":"汇总构建结果","variant":"emphasis"},
+    {"from":"assets","to":"requirements","label":"引用资料","labelDy":70},
+    {"from":"repos","to":"versions","label":"确定工程上下文","labelDy":70},
+    {"from":"resources","to":"versions","label":"提供测试条件"}
+  ],
+  "cards":[{"dot":"emerald","title":"产品关系，不是部署拓扑","items":["六个一级模块；需求开发位于版本／需求工作区内。","当前为交互原型，不表示已经接入真实执行系统或后端 API。"]}]
+}

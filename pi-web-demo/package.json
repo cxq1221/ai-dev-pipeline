@@ -1,0 +1,30 @@
+{
+  "name": "pi-web-coding-demo",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "prestart": "npm run build",
+    "build": "vite build",
+    "dev": "NODE_ENV=development node --env-file-if-exists=.env server.mjs"
+  },
+  "engines": {
+    "node": ">=22.12"
+  },
+  "dependencies": {
+    "@earendil-works/pi-agent-core": "0.87.1",
+    "@earendil-works/pi-ai": "0.87.1",
+    "@sinclair/typebox": "^0.34.0",
+    "diff": "^8.0.0",
+    "dompurify": "^3.3.0",
+    "express": "^5.1.0",
+    "marked": "^17.0.0",
+    "vue": "^3.5.43"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.9",
+    "vite": "^8.3.0"
+  }
+}

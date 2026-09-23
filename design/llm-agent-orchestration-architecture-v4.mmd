@@ -1,0 +1,64 @@
+flowchart TB
+  actor["需求方 / 研发人员"]
+
+  subgraph control["后台调度与控制面"]
+    intake["任务入口<br/>目标 · 平台 · 仓库 · 约束"]
+    scheduler["调度器<br/>能力匹配 · 选机 · 排队 · 租约"]
+    policy["策略与权限<br/>仓库范围 · 工具白名单 · 审批门禁"]
+    state["任务状态与证据<br/>日志 · 截图 · 测试 · 产物 · 审计"]
+    intake --> scheduler
+    policy --> scheduler
+    scheduler --> state
+  end
+
+  subgraph pool["异构执行机器池"]
+    subgraph host["被调度机器：PC / macOS / Linux"]
+      host_agent["主 LLM Agent"]
+      planner["任务编排 / 计划"]
+      coder["代码开发 / 仓库操作"]
+      tester["构建 / 测试 / 诊断"]
+      appctl["App / 浏览器 / IDE 控制<br/>模拟触控 · USB 协议 · 外设 / HID 控制"]
+      tools["本机工具层<br/>Shell · Git · 编译器 · 测试框架 · UI 自动化"]
+      host_agent --> planner
+      host_agent --> coder
+      host_agent --> tester
+      host_agent --> appctl
+      planner --> tools
+      coder --> tools
+      tester --> tools
+      appctl --> tools
+    end
+
+    subgraph runtime["目标应用与 SDK 运行时（随执行机器部署）"]
+      app["目标 App / Demo / 游戏"]
+      sdk["预置 SDK"]
+      sdk_agent["SDK Runner<br/>受限命令 · 状态查询 · 事件回传"]
+      capability["SDK / 设备能力<br/>初始化 · 登录 · 推流 · 控制 · 诊断"]
+      app --> sdk
+      sdk --> sdk_agent
+      sdk_agent --> capability
+    end
+  end
+
+  repo[("代码仓库")]
+  artifact[("构建产物 / 测试平台")]
+  human{"人工审批"}
+
+  actor --> intake
+  scheduler == "任务租约 + 执行上下文" ==> host_agent
+  host_agent -. "进度 / 证据 / 结果" .-> state
+  tools <--> repo
+  tools --> artifact
+  host_agent == "受控指令" ==> sdk_agent
+  sdk_agent -. "运行态 / 事件 / 诊断证据" .-> host_agent
+  state --> human
+  human -- "通过后" --> artifact
+
+  classDef control fill:#eaf2ff,stroke:#3974d8,color:#17345f,stroke-width:1.5px;
+  classDef agent fill:#f0eafe,stroke:#7656d6,color:#36216f,stroke-width:2px;
+  classDef resource fill:#e8f8f0,stroke:#31986a,color:#18573c,stroke-width:1.5px;
+  classDef gate fill:#fff2db,stroke:#d58920,color:#71450c,stroke-width:1.5px;
+  class intake,scheduler,policy,state control;
+  class host_agent,sdk_agent agent;
+  class planner,coder,tester,appctl,tools,app,sdk,capability,repo,artifact resource;
+  class human gate;

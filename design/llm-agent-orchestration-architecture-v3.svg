@@ -1,0 +1,195 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1040" viewBox="0 0 1600 1040" role="img" aria-labelledby="title desc">
+  <title id="title">跨平台 LLM Agent 调度与 SDK 代理架构 V3</title>
+  <desc id="desc">后台控制面按平台、仓库和能力调度 PC、macOS 或 Linux 执行机器。机器内部同时包含主 LLM Agent、目标 App、预置 SDK 与 SDK 代理 Agent。</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F7F9FD"/>
+      <stop offset="1" stop-color="#EEF3FA"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#EDF5FF"/>
+      <stop offset="1" stop-color="#DDEBFF"/>
+    </linearGradient>
+    <linearGradient id="violet" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7857E7"/>
+      <stop offset="1" stop-color="#5940C6"/>
+    </linearGradient>
+    <linearGradient id="green" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#EAF9F2"/>
+      <stop offset="1" stop-color="#DDF4EA"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#20314D" flood-opacity="0.10"/>
+    </filter>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#3974D8"/>
+    </marker>
+    <marker id="arrow-purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#6B4ED8"/>
+    </marker>
+    <marker id="arrow-gray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#8290A7"/>
+    </marker>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+      .title { font-size: 30px; font-weight: 750; fill: #17233B; }
+      .subtitle { font-size: 15px; fill: #64728A; }
+      .layer-label { font-size: 14px; font-weight: 700; fill: #526078; letter-spacing: 1.2px; }
+      .box-title { font-size: 17px; font-weight: 700; fill: #20314D; }
+      .box-copy { font-size: 14px; fill: #53627A; }
+      .agent-title { font-size: 19px; font-weight: 750; fill: white; }
+      .agent-copy { font-size: 13px; fill: #EDE9FF; }
+      .edge-label { font-size: 13px; font-weight: 650; fill: #53627A; }
+      .small { font-size: 12px; fill: #758298; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="1040" fill="url(#bg)"/>
+  <circle cx="1480" cy="90" r="180" fill="#DDE8FA" opacity="0.5"/>
+  <circle cx="80" cy="990" r="230" fill="#E3E0FA" opacity="0.42"/>
+
+  <text x="74" y="62" class="title">跨平台 LLM Agent 调度与 SDK 代理架构</text>
+  <text x="74" y="92" class="subtitle">中心控制面选择合适机器；机器端主 Agent 自主完成开发闭环；SDK Agent 仅执行受限运行时能力</text>
+
+  <!-- Layer 1 -->
+  <rect x="60" y="125" width="1480" height="240" rx="24" fill="white" stroke="#D8E2F0" filter="url(#shadow)"/>
+  <text x="84" y="155" class="layer-label">01 · 后台调度与控制面</text>
+
+  <g>
+    <rect x="90" y="184" width="250" height="128" rx="18" fill="url(#blue)" stroke="#AFCBF4"/>
+    <circle cx="120" cy="216" r="14" fill="#3974D8"/>
+    <text x="148" y="222" class="box-title">任务入口</text>
+    <text x="112" y="254" class="box-copy">目标 · 平台 · 仓库</text>
+    <text x="112" y="278" class="box-copy">验收条件 · 安全约束</text>
+  </g>
+
+  <g>
+    <rect x="395" y="184" width="280" height="128" rx="18" fill="url(#blue)" stroke="#AFCBF4"/>
+    <circle cx="425" cy="216" r="14" fill="#3974D8"/>
+    <text x="453" y="222" class="box-title">智能调度器</text>
+    <text x="417" y="254" class="box-copy">能力匹配 · 选机 · 排队</text>
+    <text x="417" y="278" class="box-copy">任务租约 · 超时 · 重试</text>
+  </g>
+
+  <g>
+    <rect x="730" y="184" width="290" height="128" rx="18" fill="#FFF7E9" stroke="#E9C275"/>
+    <circle cx="760" cy="216" r="14" fill="#D58920"/>
+    <text x="788" y="222" class="box-title">策略与权限</text>
+    <text x="752" y="254" class="box-copy">仓库范围 · 工具白名单</text>
+    <text x="752" y="278" class="box-copy">凭证租约 · 人工审批门禁</text>
+  </g>
+
+  <g>
+    <rect x="1075" y="184" width="430" height="128" rx="18" fill="#F2F5F9" stroke="#CBD5E2"/>
+    <circle cx="1105" cy="216" r="14" fill="#68778F"/>
+    <text x="1133" y="222" class="box-title">任务状态与证据平面</text>
+    <text x="1097" y="254" class="box-copy">计划 · 日志 · 截图 · 测试结果 · 构建产物</text>
+    <text x="1097" y="278" class="box-copy">全过程审计，可暂停、接管、回放与审批</text>
+  </g>
+
+  <path d="M340 248 H395" stroke="#3974D8" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+  <path d="M675 248 H730" stroke="#3974D8" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+  <path d="M1020 248 H1075" stroke="#3974D8" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
+
+  <!-- Layer 2 -->
+  <rect x="60" y="405" width="1480" height="460" rx="24" fill="white" stroke="#D8E2F0" filter="url(#shadow)"/>
+  <text x="84" y="437" class="layer-label">02 · 异构执行机器池 · PC / macOS / Linux</text>
+
+  <g>
+    <rect x="90" y="468" width="260" height="128" rx="20" fill="url(#violet)"/>
+    <circle cx="130" cy="510" r="20" fill="#FFFFFF" opacity="0.18"/>
+    <path d="M122 510 h16 M130 502 v16" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+    <text x="165" y="508" class="agent-title">主 LLM Agent</text>
+    <text x="112" y="540" class="agent-copy">理解目标、拆解任务、选择工具</text>
+    <text x="112" y="564" class="agent-copy">在本机形成“计划 → 执行 → 验证”闭环</text>
+  </g>
+
+  <g>
+    <rect x="400" y="470" width="195" height="102" rx="16" fill="url(#green)" stroke="#9FD9BE"/>
+    <text x="424" y="508" class="box-title">任务编排</text>
+    <text x="424" y="536" class="box-copy">计划 · 依赖 · 重试</text>
+  </g>
+  <g>
+    <rect x="630" y="470" width="195" height="102" rx="16" fill="url(#green)" stroke="#9FD9BE"/>
+    <text x="654" y="508" class="box-title">代码开发</text>
+    <text x="654" y="536" class="box-copy">读写代码 · Git · PR</text>
+  </g>
+  <g>
+    <rect x="400" y="610" width="195" height="102" rx="16" fill="url(#green)" stroke="#9FD9BE"/>
+    <text x="424" y="648" class="box-title">构建与测试</text>
+    <text x="424" y="676" class="box-copy">单测 · 集成 · 诊断</text>
+  </g>
+  <g>
+    <rect x="630" y="600" width="195" height="125" rx="16" fill="url(#green)" stroke="#9FD9BE"/>
+    <text x="654" y="636" class="box-title">控制 App</text>
+    <text x="654" y="663" class="box-copy">浏览器 · IDE · 桌面 UI</text>
+    <text x="654" y="686" class="small">模拟触控 · USB 协议</text>
+    <text x="654" y="708" class="small">外设 / HID 控制</text>
+  </g>
+
+  <rect x="385" y="758" width="455" height="72" rx="16" fill="#F3F6FA" stroke="#CBD5E2"/>
+  <text x="410" y="788" class="box-title">本机工具与操作系统</text>
+  <text x="410" y="814" class="box-copy">Shell · Git · 编译器 · 测试框架 · UI 自动化 · 文件系统</text>
+
+  <path d="M350 530 H400" stroke="#6B4ED8" stroke-width="2.5" marker-end="url(#arrow-purple)"/>
+  <path d="M350 530 C370 530 372 521 400 521" stroke="#6B4ED8" stroke-width="2.5" fill="none"/>
+  <path d="M350 544 C372 544 374 661 400 661" stroke="#6B4ED8" stroke-width="2.5" fill="none" marker-end="url(#arrow-purple)"/>
+  <path d="M350 536 C460 536 520 521 630 521" stroke="#6B4ED8" stroke-width="2.5" fill="none" marker-end="url(#arrow-purple)"/>
+  <path d="M350 550 C470 550 520 661 630 661" stroke="#6B4ED8" stroke-width="2.5" fill="none" marker-end="url(#arrow-purple)"/>
+  <path d="M497 712 V758 M727 712 V758" stroke="#8290A7" stroke-width="2" marker-end="url(#arrow-gray)"/>
+  <path d="M497 572 V590 H612 V758 M727 572 V590 H612" stroke="#8290A7" stroke-width="2" fill="none" marker-end="url(#arrow-gray)"/>
+
+  <!-- Target runtime nested inside Layer 2 -->
+  <rect x="1130" y="456" width="380" height="374" rx="20" fill="#F9FAFD" stroke="#CBD5E2"/>
+  <text x="1154" y="486" class="layer-label">目标 APP / SDK 运行时 · 随执行机器部署</text>
+
+  <rect x="1160" y="505" width="320" height="70" rx="16" fill="#F3F6FA" stroke="#CBD5E2"/>
+  <text x="1186" y="533" class="box-title">目标 App / Demo / 游戏</text>
+  <text x="1186" y="557" class="box-copy">真实用户流程与运行环境</text>
+
+  <rect x="1175" y="594" width="290" height="210" rx="20" fill="#F7F4FF" stroke="#BEB1F1" stroke-width="1.5"/>
+  <text x="1200" y="626" class="box-title">预置 SDK</text>
+  <rect x="1200" y="645" width="240" height="75" rx="16" fill="url(#violet)"/>
+  <text x="1225" y="675" class="agent-title">SDK 代理 Agent</text>
+  <text x="1225" y="701" class="agent-copy">轻量、受限、可观测</text>
+  <rect x="1200" y="741" width="240" height="40" rx="12" fill="#E7F7EF" stroke="#9FD9BE"/>
+  <text x="1219" y="766" class="box-copy">SDK / 设备能力白名单</text>
+
+  <path d="M1320 575 V594" stroke="#8290A7" stroke-width="2" marker-end="url(#arrow-gray)"/>
+  <path d="M1320 720 V741" stroke="#6B4ED8" stroke-width="2.5" marker-end="url(#arrow-purple)"/>
+
+  <!-- Cross-layer communication -->
+  <path d="M540 365 V444 C540 454 530 454 530 468" stroke="#3974D8" stroke-width="4" fill="none" marker-end="url(#arrow-blue)"/>
+  <rect x="394" y="374" width="292" height="26" rx="13" fill="#EAF2FF"/>
+  <text x="415" y="392" class="edge-label">任务租约 + 仓库 + 约束 + 临时凭证</text>
+
+  <path d="M300 468 V430 C300 392 1170 392 1170 312" stroke="#8290A7" stroke-width="2" stroke-dasharray="7 6" fill="none" marker-end="url(#arrow-gray)"/>
+  <text x="755" y="386" class="edge-label">持续回传：进度 / 证据 / 产物 / 风险</text>
+
+  <path d="M840 690 H1128 C1144 690 1150 682 1200 682" stroke="#6B4ED8" stroke-width="4" fill="none" marker-end="url(#arrow-purple)"/>
+  <rect x="874" y="650" width="250" height="28" rx="14" fill="#EEE9FF"/>
+  <text x="903" y="669" class="edge-label">版本化协议：受控指令 →</text>
+
+  <path d="M1200 711 C1150 711 1144 737 1128 737 H840" stroke="#8290A7" stroke-width="2.5" stroke-dasharray="7 6" fill="none" marker-end="url(#arrow-gray)"/>
+  <rect x="886" y="720" width="238" height="28" rx="14" fill="#F2F5F9"/>
+  <text x="905" y="739" class="edge-label">← 状态 / 事件 / 诊断证据</text>
+
+  <!-- External resources / footnote -->
+  <rect x="60" y="905" width="1480" height="88" rx="20" fill="#17233B"/>
+  <text x="90" y="937" font-size="14" font-weight="700" fill="#B8C6DB" letter-spacing="1">核心边界</text>
+  <text x="90" y="968" font-size="15" fill="white">后台负责“选谁做、允许做什么”</text>
+  <circle cx="430" cy="963" r="4" fill="#6F85A6"/>
+  <text x="452" y="968" font-size="15" fill="white">主 Agent 负责“如何完成并验证”</text>
+  <circle cx="798" cy="963" r="4" fill="#6F85A6"/>
+  <text x="820" y="968" font-size="15" fill="white">SDK Agent 负责“在运行时安全执行与回传”</text>
+  <circle cx="1240" cy="963" r="4" fill="#6F85A6"/>
+  <text x="1262" y="968" font-size="15" fill="white">高风险动作需人工门禁</text>
+
+  <!-- Legend -->
+  <rect x="1125" y="126" width="380" height="34" rx="17" fill="#F5F7FB" stroke="#D8E2F0"/>
+  <circle cx="1148" cy="143" r="6" fill="#3974D8"/><text x="1162" y="148" class="small">控制</text>
+  <circle cx="1222" cy="143" r="6" fill="#6B4ED8"/><text x="1236" y="148" class="small">Agent</text>
+  <circle cx="1305" cy="143" r="6" fill="#4AA879"/><text x="1319" y="148" class="small">执行能力</text>
+  <line x1="1408" y1="143" x2="1436" y2="143" stroke="#8290A7" stroke-width="2" stroke-dasharray="5 4"/>
+  <text x="1443" y="148" class="small">回传</text>
+</svg>

@@ -1,0 +1,20 @@
+{
+ "schema_version":1,"diagram_type":"workflow",
+ "meta":{"title":"Forge · 从需求到交付","locale":"zh-CN","quality_profile":"showcase","viewBox":[720,466],"legend":{"mode":"hidden"}},
+ "lanes":[{"id":"intent","label":"表达与组织"},{"id":"implementation","label":"开发与构建"},{"id":"verification","label":"验证与交付"}],
+ "mainPath":["request","scope","develop","build","test","release"],
+ "nodes":[
+  {"id":"request","lane":"intent","col":0,"type":"frontend","label":"提出需求","sublabel":"至少选择一个平台"},
+  {"id":"scope","lane":"intent","col":1,"type":"frontend","label":"明确范围","sublabel":"仓库确认 · 版本归属"},
+  {"id":"develop","lane":"implementation","col":2,"type":"frontend","label":"协同开发","sublabel":"预览反馈 · 开发测试"},
+  {"id":"build","lane":"implementation","col":3,"type":"backend","label":"构建候选包","sublabel":"包 · Demo · API 文档"},
+  {"id":"test","lane":"verification","col":4,"type":"frontend","label":"版本系统测试","sublabel":"用例集 · 环境 · 设备"},
+  {"id":"release","lane":"verification","col":5,"type":"frontend","label":"确认交付","sublabel":"人工验收 · 发布"}
+ ],
+ "edges":[{"from":"request","to":"scope"},{"from":"scope","to":"develop"},{"from":"develop","to":"build"},{"from":"build","to":"test"},{"from":"test","to":"release"}],
+ "cards":[
+  {"dot":"cyan","title":"开发反馈","items":["运行预览用于及时反馈；开发测试不替代系统测试。"]},
+  {"dot":"emerald","title":"交付依据","items":["测试结论绑定候选包、用例集与资源；问题修复后重新构建验证。"]},
+  {"dot":"amber","title":"原型边界","items":["这是目标协作流程，不表示已接入真实 AI、构建、测试或发布。"]}
+ ]
+}
