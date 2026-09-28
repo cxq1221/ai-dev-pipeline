@@ -2,6 +2,8 @@
 
 默认地址：`http://127.0.0.1:4317`。无需 SDK，无需 `X-CSRF-Token`。模型 API Key 只由后端配置，客户端不传 Key。
 
+DeepSeek Harness 版使用相同接口，默认地址为 `http://127.0.0.1:4319`。它会把 `deepseek-flash` 映射为 `deepseek-v4-flash`；状态中的 `model` 保留请求值，`modelId` 是 Harness 的实际模型 ID。DeepSeek 版不支持同步回退模型上下文，因此 `canUndo=false`、`/api/undo` 返回 501；停止、重启、切换模型后的下一轮通过最近完成的对话文本继续，而非恢复 Harness 的完整工具历史。Pi 版按下文契约支持完整撤销。
+
 ## 公共参数
 
 所有 `/api/*` 接口必填以下三项：GET 使用 query，POST 使用 JSON body。
@@ -27,7 +29,7 @@
 | GET | `/api/state` | 无 | 当前会话状态 |
 | POST | `/api/stop` | 无 | `{ "ok": true }`，请求停止，等待状态变为 `stopped` |
 | POST | `/api/reset` | 无 | 清空本会话对话和撤销记录，保留文件 |
-| POST | `/api/undo` | 无 | 撤销本会话最近一轮文件修改及相应模型上下文 |
+| POST | `/api/undo` | 无 | Pi 版撤销最近一轮文件及上下文；DeepSeek Harness 版返回 501 |
 | GET | `/api/files` | 无 | 相对路径字符串数组 |
 | GET | `/api/file` | `path`：相对文件路径 | `{ "content": "..." }` |
 

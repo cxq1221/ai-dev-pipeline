@@ -98,7 +98,7 @@ onUnmounted(() => events?.close());
 <template>
   <main class="chat">
     <header>
-      <h1>编码对话</h1>
+      <h1>{{ state.backend === "deepseek-harness" ? "DeepSeek Harness" : "编码对话" }}</h1>
       <span role="status">{{ state.busy ? "正在执行" : status }}</span>
     </header>
 

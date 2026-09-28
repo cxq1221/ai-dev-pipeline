@@ -74,8 +74,8 @@ function retry(turn) {
 </script>
 <template>
   <header>
-    <a class="brand" href="/" aria-label="Pi 编码工作台"
-      ><b>π</b><span>Pi <em>/</em> 编码工作台</span></a
+    <a class="brand" href="/" :aria-label="`${state.backend === 'deepseek-harness' ? 'DeepSeek Harness' : 'Pi'} 编码工作台`"
+      ><b>{{ state.backend === "deepseek-harness" ? "D" : "π" }}</b><span>{{ state.backend === "deepseek-harness" ? "DeepSeek Harness" : "Pi" }} <em>/</em> 编码工作台</span></a
     >
     <div class="header-right">
       <a class="quiet" href="/quickstart/">Quickstart ↗</a>

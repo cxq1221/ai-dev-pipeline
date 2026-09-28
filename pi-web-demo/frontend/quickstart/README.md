@@ -17,6 +17,8 @@ npm run dev
 
 保持上述 `npm run dev` 运行，直接访问 **http://127.0.0.1:4317/quickstart/**；不需要再启动一个进程。`npm start` 也会构建并托管这两个页面。
 
+若使用 DeepSeek Harness 后端，在 `pi-web-demo/` 运行 `npm run dev:deepseek`，访问 **http://127.0.0.1:4319/quickstart/**。页面代码及 HTTP/SSE 接口相同；独立运行本目录的 Vite 服务时，将 `vite.config.js` 中的 `backend` 改成 `http://127.0.0.1:4319`。
+
 两个示例共用 API；Quickstart 默认 `appID=quickdemo`、`session=quickstart`，与工作台数据独立。
 
 ## 独立运行或复制到其他项目

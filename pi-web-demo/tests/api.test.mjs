@@ -14,10 +14,11 @@ import {
 import { createApi, createPreview } from "../backend/http.mjs";
 import { resolveModel as realResolveModel } from "../backend/models.mjs";
 
-// No provider calls in these tests; the real file tools, checkpoints and HTTP routes run.
+// No provider calls in these tests; checkpoints and HTTP routes run with a fake agent.
 class FakeAgent {
   constructor(options) {
-    this.state = { ...options.initialState };
+    this.root = options.root;
+    this.state = { model: options.model, messages: options.messages };
     this.listeners = new Set();
   }
   subscribe(fn) {
@@ -44,9 +45,8 @@ class FakeAgent {
         toolName: "write_file",
         args,
       });
-      const result = await this.state.tools
-        .find((t) => t.name === "write_file")
-        .execute("write-1", args, this.controller.signal);
+      await fs.writeFile(path.join(this.root, args.path), args.content);
+      const result = { content: [{ type: "text", text: "Written" }] };
       this.emit({ type: "tool_execution_end", toolCallId: "write-1", result });
     }
     this.emit({

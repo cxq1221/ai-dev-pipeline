@@ -1,5 +1,6 @@
 import { createModels } from "@earendil-works/pi-ai";
 import { deepseekProvider } from "@earendil-works/pi-ai/providers/deepseek";
+export { redact } from "./redact.mjs";
 
 const models = createModels();
 models.setProvider(deepseekProvider());
@@ -15,10 +16,5 @@ export function resolveModel(name) {
   return {
     model: { ...models.getModel("deepseek", name), maxTokens: 8192 },
     apiKey: process.env.DEEPSEEK_API_KEY,
-    streamFn: models.streamSimple.bind(models),
   };
-}
-export function redact(value) {
-  const key = process.env.DEEPSEEK_API_KEY;
-  return key ? String(value).split(key).join("[REDACTED]") : String(value);
 }

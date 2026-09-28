@@ -8,15 +8,17 @@
     "test": "node --test tests/*.test.mjs",
     "prestart": "npm run build",
     "build": "vite build",
-    "dev": "NODE_ENV=development node --env-file-if-exists=.env server.mjs"
+    "dev": "NODE_ENV=development node --env-file-if-exists=.env server.mjs",
+    "dev:deepseek": "PORT=${PORT:-4319} NODE_ENV=development node --env-file-if-exists=.env server-deepseek.mjs",
+    "start:deepseek": "npm run build && PORT=${PORT:-4319} node --env-file-if-exists=.env server-deepseek.mjs"
   },
   "engines": {
-    "node": ">=22.12"
+    "node": ">=22.19.0"
   },
   "dependencies": {
-    "@earendil-works/pi-agent-core": "0.87.1",
+    "@deepseek-ai/dsh-sdk-client": "0.1.7-rc.1",
     "@earendil-works/pi-ai": "0.87.1",
-    "@sinclair/typebox": "^0.34.0",
+    "@earendil-works/pi-coding-agent": "0.87.1",
     "diff": "^8.0.0",
     "dompurify": "^3.3.0",
     "express": "^5.1.0",

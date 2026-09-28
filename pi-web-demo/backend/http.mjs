@@ -1,7 +1,7 @@
 import express from "express";
 import fs from "node:fs/promises";
 import { snapshot, safePath } from "../workspace.mjs";
-import { redact } from "./models.mjs";
+import { redact } from "./redact.mjs";
 
 export function createApi(store) {
   const api = express.Router();

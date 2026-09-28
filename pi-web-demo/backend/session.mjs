@@ -1,10 +1,9 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { randomBytes } from "node:crypto";
-import { Agent } from "@earendil-works/pi-agent-core";
 import { snapshot, changes, restore } from "../workspace.mjs";
-import { createTools } from "./tools.mjs";
-import { redact } from "./models.mjs";
+import { createPiAgent } from "./pi-agent.mjs";
+import { redact } from "./redact.mjs";
 
 const fail = (message, status = 409) =>
   Object.assign(new Error(message), { status });
@@ -16,7 +15,7 @@ export async function createSession({
   dataDir,
   previewUrl,
   resolveModel,
-  agentFactory = (options) => new Agent(options),
+  agentFactory,
 }) {
   await fs.mkdir(root, { recursive: true });
   await fs.mkdir(dataDir, { recursive: true, mode: 0o700 });
@@ -30,6 +29,7 @@ export async function createSession({
   }
   let modelConfig = resolveModel(saved.model || identity.model);
   const state = {
+    backend: "pi",
     appID: identity.appID,
     session: identity.session,
     model: modelConfig.model.id,
@@ -68,17 +68,15 @@ export async function createSession({
         emit();
       }, 40);
   }
-  const agent = agentFactory({
-    initialState: {
-      model: modelConfig.model,
-      thinkingLevel: "off",
-      systemPrompt: `你是编码助手。用中文简洁沟通，直接调用工具完成用户要求。工作目录是 ${root}，只读写此目录，不访问其他目录、密钥或系统配置。先检查已有文件再修改。实现后执行适当验证并如实汇报。默认创建无需构建的 HTML/CSS/JavaScript 网页，入口 index.html，静态预览服务器已经启动，不要启动任何服务器。必须使用真实工具结果，不能编造测试结果。多轮对话继续修改当前项目。不要提交、推送、部署，除非用户明确要求。不要使用后台进程。`,
-      tools: createTools(root, redact),
-      messages: saved.messages || [],
-    },
-    streamFn: modelConfig.streamFn,
-    getApiKey: () => modelConfig.apiKey,
-    toolExecution: "sequential",
+  const agent = agentFactory ? await agentFactory({
+    root,
+    model: modelConfig.model,
+    messages: saved.messages || [],
+  }) : await createPiAgent({
+    root,
+    dataDir,
+    modelConfig,
+    messages: saved.messages || [],
   });
   async function persist() {
     const temp = path.join(dataDir, "session.tmp");
@@ -198,7 +196,8 @@ export async function createSession({
       const before = await snapshot(root),
         priorMessages = structuredClone(agent.state.messages);
       modelConfig = nextModel;
-      agent.state.model = nextModel.model;
+      if (agent.setModel) await agent.setModel(nextModel);
+      else agent.state.model = nextModel.model;
       state.model = nextModel.model.id;
       state.modelId = nextModel.model.id;
       state.configured = true;
@@ -241,7 +240,8 @@ export async function createSession({
     state.busy = true;
     try {
       await restore(root, undo.before, undo.after);
-      agent.state.messages = undo.priorMessages;
+      if (agent.restoreMessages) agent.restoreMessages(undo.priorMessages);
+      else agent.state.messages = undo.priorMessages;
       const turn = state.turns.find((t) => t.id === undo.turnId);
       if (turn) turn.status = "undone";
       undo = null;
@@ -255,9 +255,11 @@ export async function createSession({
     if (state.busy) throw fail("请先停止当前任务");
     state.busy = true;
     try {
-      agent.state.messages = agent.state.messages
+      const emptyMessages = agent.state.messages
         .filter((m) => m.role === "system")
         .slice(0, 1);
+      if (agent.restoreMessages) agent.restoreMessages(emptyMessages);
+      else agent.state.messages = emptyMessages;
       state.turns = [];
       undo = null;
       await persist();
@@ -290,6 +292,7 @@ export async function createSession({
       await task;
       clearTimeout(emitTimer);
       unsubscribe();
+      agent.dispose?.();
       listeners.clear();
     },
   };

@@ -1,6 +1,5 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { spawn } from "node:child_process";
 import { diffLines, createTwoFilesPatch } from "diff";
 const skipped = new Set(["node_modules", ".git", ".DS_Store", ".gitkeep"]);
 export async function safePath(root, name) {
@@ -74,50 +73,4 @@ export async function restore(root, before, expected) {
     await fs.mkdir(path.dirname(target), { recursive: true });
     await fs.writeFile(target, Buffer.from(data, "base64"));
   }
-}
-export function runCommand(root, command, signal, onUpdate = () => {}) {
-  return new Promise((resolve, reject) => {
-    if (signal?.aborted) return reject(new Error("命令已停止"));
-    // Deliberately local execution, NOT an OS sandbox. Never inherit API credentials.
-    const child = spawn("/bin/sh", ["-c", command], {
-      cwd: root,
-      detached: true,
-      env: {
-        PATH: process.env.PATH,
-        HOME: root,
-        TMPDIR: process.env.TMPDIR || "/tmp",
-        LANG: "en_US.UTF-8",
-      },
-    });
-    let output = "";
-    let timedOut = false;
-    let aborted = false;
-    const kill = () => {
-      try {
-        process.kill(-child.pid, "SIGKILL");
-      } catch {}
-    };
-    const abort = () => {
-      aborted = true;
-      kill();
-    };
-    const timeout = setTimeout(() => {
-      timedOut = true;
-      kill();
-    }, 60000);
-    signal?.addEventListener("abort", abort, { once: true });
-    const chunk = (data) => {
-      output = (output + data.toString()).slice(-30000);
-      onUpdate(output);
-    };
-    child.stdout.on("data", chunk);
-    child.stderr.on("data", chunk);
-    child.on("error", reject);
-    child.on("close", (code) => {
-      clearTimeout(timeout);
-      signal?.removeEventListener("abort", abort);
-      kill();
-      resolve({ code, output, timedOut, aborted });
-    });
-  });
 }

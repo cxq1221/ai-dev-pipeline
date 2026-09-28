@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createSessionStore } from "./backend/sessions.mjs";
 import { createApi, createPreview } from "./backend/http.mjs";
-import { redact } from "./backend/models.mjs";
+import { redact } from "./backend/redact.mjs";
 const base = path.dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT || 4317),
   previewPort = port + 1;

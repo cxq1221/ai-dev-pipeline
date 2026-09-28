@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {"title": "需求中心 MVP · 七大模块输入输出", "locale": "zh-CN", "quality_profile": "showcase", "viewBox": [1390, 760], "legend": {"mode": "hidden"}},
+  "components": [
+    {"id":"orchestration","type":"frontend","label":"01 需求会话与流程编排","pos":[500,30],"size":[360,140],"sublabel":"输入：用户对话、资料、操作指令","tag":"输出：执行任务、流程进度、结果关联"},
+    {"id":"workers","type":"cloud","label":"02 开发机管理调度","pos":[30,300],"size":[360,140],"sublabel":"输入：系统、工具链、资源等开发机需求","tag":"输出：开发机连接地址、协议与分配标识"},
+    {"id":"coding","type":"backend","label":"03 AI 代码开发","pos":[500,300],"size":[360,140],"sublabel":"输入：对话、仓库/分支策略、开发机连接","tag":"输出：代码、需求分支、commit / 快照"},
+    {"id":"artifacts","type":"database","label":"04 制品构建与管理","pos":[970,300],"size":[360,140],"sublabel":"输入：仓库分支/tag、构建配置、待归档证据","tag":"输出：制品下载地址、文档/证据地址、进度"},
+    {"id":"devices","type":"cloud","label":"05 设备管理调度","pos":[30,570],"size":[360,140],"sublabel":"输入：设备地址+类型（注册）；设备需求（分配）","tag":"输出：可连接设备、占用凭证、预览/控制入口"},
+    {"id":"deployment","type":"backend","label":"06 应用部署","pos":[500,570],"size":[360,140],"sublabel":"输入：设备连接、下载地址、安装方式、是否自启动","tag":"输出：部署结果、安装信息、启动/就绪结果"},
+    {"id":"testing","type":"backend","label":"07 自动化测试","pos":[970,570],"size":[360,140],"sublabel":"输入：用例集、制品地址、设备连接、端类型","tag":"输出：原始步骤结果、证据、AI 总结报告"}
+  ],
+  "connections": [
+    {"from":"orchestration","to":"coding","label":"开发指令","variant":"emphasis","labelDy":60},
+    {"from":"workers","to":"coding","label":"开发机连接"},
+    {"from":"coding","to":"artifacts","label":"固定代码","variant":"emphasis"},
+    {"from":"artifacts","to":"testing","label":"候选制品","variant":"emphasis","labelDy":60},
+    {"from":"testing","to":"deployment","label":"请求部署"},
+    {"from":"devices","to":"deployment","label":"设备连接"}
+  ],
+  "cards": [
+    {"dot":"cyan","title":"编排与开发","items":["编排统一调度全部能力、汇总结果；仅绘主要交接线。","Agent 管理共享工作区和分支；开发机模块只管资源。"]},
+    {"dot":"emerald","title":"部署与预览","items":["设备模块负责发现、连接状态、分配、预览与远程操作。","部署负责下载、校验、安装、自动拉起；开发与测试共用。"]},
+    {"dot":"amber","title":"用例与证据","items":["测试还提供：原始用例 → 转换、校验 → 可执行用例集。","构建模块管理 SDK / Demo / 文档，并归档日志与测试证据。"]}
+  ]
+}
