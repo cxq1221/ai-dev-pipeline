@@ -88,6 +88,11 @@ small {
   min-height: 100vh;
 }
 .sidebar {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  overflow-y: auto;
+  align-self: start;
   padding: 28px 20px;
   background: white;
   border-right: 1px solid var(--line);
@@ -133,6 +138,9 @@ small {
   letter-spacing: 1px;
 }
 .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
   height: 64px;
   border-bottom: 1px solid var(--line);
   background: #fff;
@@ -140,9 +148,73 @@ small {
   display: flex;
   justify-content: space-between;
 }
-.topbar span {
+.app-shell > main {
+  min-width: 0;
+}
+.topbar > span {
   font-size: 12px;
   color: var(--muted);
+}
+.topbar-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  font-size: 13px;
+}
+.topbar-breadcrumb a {
+  color: inherit;
+}
+.topbar-breadcrumb a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.topbar-breadcrumb [aria-current="page"] {
+  color: var(--muted);
+}
+.topbar.has-requirement {
+  align-items: center;
+  justify-content: flex-start;
+  gap: 20px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.topbar-requirement {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 0 1 auto;
+  width: fit-content;
+  max-width: min(460px, 48vw);
+  margin: 0;
+  padding: 8px 12px;
+  border-color: #cbd9d0;
+  background: #f5f8f6;
+  text-align: left;
+}
+.topbar-requirement:hover {
+  border-color: #8eb19d;
+  background: #edf5f0;
+}
+.topbar-requirement .topbar-requirement-label {
+  flex-shrink: 0;
+  color: #52695e;
+  font-weight: 600;
+}
+.topbar-requirement .topbar-requirement-text {
+  min-width: 0;
+  overflow: hidden;
+  color: #223c34;
+  font-size: 13px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.topbar-requirement .topbar-requirement-action {
+  flex-shrink: 0;
+  color: var(--accent);
+  font-weight: 600;
 }
 .pool,
 .development {
@@ -254,6 +326,26 @@ td small {
   }
   .topbar {
     padding: 20px;
+  }
+  .topbar.has-requirement {
+    gap: 8px;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  .topbar-breadcrumb { gap: 5px; font-size: 11px; }
+  .topbar-requirement {
+    max-width: min(220px, calc(100vw - 175px));
+    gap: 5px;
+    padding: 6px;
+  }
+  .topbar-requirement .topbar-requirement-label {
+    display: none;
+  }
+  .topbar-requirement .topbar-requirement-text {
+    font-size: 11px;
+  }
+  .topbar-requirement .topbar-requirement-action {
+    font-size: 10px;
   }
   .page-heading {
     gap: 12px;
