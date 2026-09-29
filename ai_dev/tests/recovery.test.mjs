@@ -3,20 +3,18 @@ import { SQL } from "bun";
 import path from "node:path";
 import { fixture, api, completeClarification } from "./helpers.mjs";
 import { modelServer } from "./model-server.mjs";
-import { startExecutor } from "../backend/executor/http.mjs";
+import { startLlmBackend } from "../backend/llm/http.mjs";
 import { startGateway } from "../backend/gateway/http.mjs";
 test("网关重启不取消开发机上的执行，并能恢复已完成结果", async () => {
   const f = await fixture(),
     model = modelServer();
-  const ex = await startExecutor({
+  const ex = await startLlmBackend({ databaseUrl: process.env.TEST_DATABASE_URL,
     port: 0,
-    previewPort: 0,
-    workspaceRoot: path.join(f.root, "workspaces"),
     dataRoot: path.join(f.root, "runtime"),
     modelBaseUrl: model.url,
   });
   const config = {
-    port: 0,
+    previewPort: 0, workspaceRoot: path.join(f.root, "workspaces"),    port: 0,
     databaseUrl: process.env.TEST_DATABASE_URL,
     executorUrl: ex.url,
   };
@@ -33,19 +31,21 @@ test("网关重启不取消开发机上的执行，并能恢复已完成结果",
       title: "A",
     });
     await api(gw.url, `/api/conversations/${c.id}/chat`, { message: "慢任务" });
+    for (let i = 0; i < 100 && model.requests.length === initialRequests; i++) await Bun.sleep(20);
     await gw.close();
     gw = await startGateway(config);
-    await Bun.sleep(1200);
+    for (let i = 0; i < 100; i++) {
+      if (!(await api(gw.url, `/api/conversations/${c.id}/state`)).busy) break;
+      await Bun.sleep(30);
+    }
     const state = await api(gw.url, `/api/conversations/${c.id}/state`);
     expect(state.busy).toBe(false);
     expect(state.turns[0].status).toBe("done");
     expect(model.requests.length).toBe(initialRequests + 1);
     await gw.close();
     await ex.close();
-    const restarted = await startExecutor({
+    const restarted = await startLlmBackend({ databaseUrl: process.env.TEST_DATABASE_URL,
       port: Number(new URL(ex.url).port),
-      previewPort: 0,
-      workspaceRoot: path.join(f.root, "workspaces"),
       dataRoot: path.join(f.root, "runtime"),
       modelBaseUrl: model.url,
     });

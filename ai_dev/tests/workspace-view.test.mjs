@@ -2,19 +2,17 @@ import { test, expect } from "bun:test";
 import path from "node:path";
 import fs from "node:fs/promises";
 import { fixture, api } from "./helpers.mjs";
-import { startExecutor } from "../backend/executor/http.mjs";
+import { startLlmBackend } from "../backend/llm/http.mjs";
 import { startGateway } from "../backend/gateway/http.mjs";
 test("需求文件、累计差异与预览对应真实工作区", async () => {
   const f = await fixture();
   await fs.writeFile(path.join(f.repo, "large.dat"), Buffer.alloc(2100000));
   f.git("add", ".");
   f.git("commit", "-m", "existing binary");
-  const ex = await startExecutor({
+  const ex = await startLlmBackend({ databaseUrl: process.env.TEST_DATABASE_URL,
     port: 0,
-    previewPort: 0,
-    workspaceRoot: path.join(f.root, "workspaces"),
   });
-  const gw = await startGateway({
+  const gw = await startGateway({ previewPort: 0, workspaceRoot: path.join(f.root, "workspaces"),
     port: 0,
     executorUrl: ex.url,
     databaseUrl: process.env.TEST_DATABASE_URL,

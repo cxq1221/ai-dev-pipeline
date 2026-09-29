@@ -4,39 +4,52 @@ import { connect, migrate } from "./db.mjs";
 import path from "node:path";
 import fs from "node:fs/promises";
 import { createServer as createHttpServer } from "node:http";
+import { backendRegistry } from "./backends.mjs";
 import { conversations } from "./conversations.mjs";
-import { executorClient } from "./executor-client.mjs";
+import { llmClient } from "./llm-client.mjs";
 import { localOnly, closeServer } from "../local-http.mjs";
+import { workspaceService } from "./workspace-service.mjs";
+import { skillCatalog } from "../shared/skills.mjs";
 import { redact } from "../redact.mjs";
 
 export async function startGateway({
   port = 4417,
+  previewPort = 4419,
+  workspaceRoot = path.resolve("workspaces"),
+  skillsRoot = path.resolve(process.env.SKILLS_DIR || "skills"),
   databaseUrl = process.env.DATABASE_URL,
   executorUrl = "http://127.0.0.1:4418",
+  backends = process.env.LLM_BACKENDS ? JSON.parse(process.env.LLM_BACKENDS) : [{ id: "local", name: "本机后端", url: executorUrl }],
+  defaultBackendId = process.env.DEFAULT_LLM_BACKEND || backends[0]?.id,
   serveUI = false,
   defaultRepositoryPath = process.env.DEFAULT_REPOSITORY_PATH || "",
   repositoryPaths = (process.env.REPOSITORY_PATHS || "").split(","),
 } = {}) {
+  await fs.mkdir(skillsRoot, { recursive: true });
+  skillsRoot = await fs.realpath(skillsRoot);
+  const workspaces = await workspaceService(workspaceRoot, previewPort);
   const sql = await connect(databaseUrl);
   await migrate(sql);
   const app = express();
   app.use(localOnly());
   app.use(express.json());
   app.get("/api/config", (_req, res) => res.json({ defaultRepositoryPath, repositoryPaths: [...new Set([defaultRepositoryPath, ...repositoryPaths].map(p => p.trim()).filter(Boolean))] }));
-  const chats = conversations(sql);
-  const executor = executorClient(executorUrl, chats, sql);
+  const registry = await backendRegistry(sql, backends, defaultBackendId, executorUrl);
+  app.get("/api/backends", (_req, res) => res.json({ backends: registry.list(), defaultBackendId }));
+  const chats = conversations(sql, registry);
+  const llm = llmClient(chats, sql, { skillsRoot, registry });
   app.post("/api/requirements/:id/clarification", async (req, res) => {
     const { message } = req.body;
     if (typeof message !== "string" || !message.trim() || message.length > 20000)
       return res.status(400).json({ error: "请先填写澄清消息（1–20000 字）" });
-    const id = await chats.clarification(req.params.id);
+    const id = await chats.clarification(req.params.id, req.body.backendId);
     // A failed dispatch retains the user's attempted session for retry.
     try {
-      const result = await executor.chat(id, message, req.body.skillNames);
+      const result = await llm.chat(id, message, req.body.skillNames);
       res.json({ ...result, conversationId: id });
     } catch (e) { res.status(e.status || 500).json({ error: redact(e.message), conversationId: id }); }
   });
-  app.get("/api/skills", async (_req, res) => res.json(await executor.request("/skills")));
+  app.get("/api/skills", async (_req, res) => res.json({ directory: skillsRoot, ...skillCatalog(skillsRoot) }));
   app.get("/api/requirements/:id/conversations", async (req, res) =>
     res.json(await chats.list(req.params.id)),
   );
@@ -44,21 +57,21 @@ export async function startGateway({
     const [r] =
       await sql`SELECT id FROM requirements WHERE id=${req.params.id}`;
     if (!r) return res.status(404).json({ error: "需求不存在" });
-    res.json(await chats.create(req.params.id, req.body.title || "需求讨论"));
+    res.json(await chats.create(req.params.id, req.body.title || "需求讨论", req.body.backendId));
   });
   app.get("/api/conversations/:id/mode", async (req, res) => {
     const c = await chats.get(req.params.id);
     res.json({ mode: c.mode, isClarification: Boolean(c.isClarification) });
   });
   app.get("/api/conversations/:id/state", async (req, res) =>
-    res.json(await executor.state(req.params.id)),
+    res.json(await llm.state(req.params.id)),
   );
   app.post("/api/conversations/:id/chat", async (req, res) =>
-    res.json(await executor.chat(req.params.id, req.body.message, req.body.skillNames, req.body.startDevelopment === true)),
+    res.json(await llm.chat(req.params.id, req.body.message, req.body.skillNames, req.body.startDevelopment === true)),
   );
   app.post("/api/conversations/:id/stop", async (req, res) => {
     await sql`UPDATE turns SET status='stopped',finished_at=${Date.now()} WHERE conversation_id=${req.params.id} AND status='queued'`;
-    res.json(await executor.request(`/sessions/${req.params.id}/stop`, {}));
+    res.json(await llm.stop(req.params.id));
   });
   app.get("/api/conversations/:id/events", async (req, res) => {
     await chats.get(req.params.id);
@@ -71,7 +84,7 @@ export async function startGateway({
       if (polling) return;
       polling = true;
       try {
-        const value = JSON.stringify(await executor.state(req.params.id));
+        const value = JSON.stringify(await llm.state(req.params.id));
         if (value !== last) {
           res.write(`data: ${value}\n\n`);
           last = value;
@@ -117,7 +130,7 @@ export async function startGateway({
     const [r] = await sql`SELECT * FROM requirements WHERE id=${req.params.id}`;
     if (!r) return res.status(404).json({ error: "需求不存在" });
     res.json(
-      await executor.request("/workspace-view", {
+      await workspaces.view({
         requirementId: r.id,
         workspacePath: r.workspace_path,
         baseRef: r.base_ref,
@@ -151,13 +164,7 @@ export async function startGateway({
         .json({ error: "请输入标题、原始需求和本地仓库路径" });
     const id = randomUUID(),
       now = Date.now();
-    const response = await fetch(executorUrl + "/workspaces", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ requirementId: id, repositoryPath, initializeEmptyRepository: req.body.initializeEmptyRepository === true }),
-    });
-    const workspace = await response.json();
-    if (!response.ok) return res.status(response.status).json(workspace);
+    const workspace = await workspaces.prepare({ requirementId: id, repositoryPath, initializeEmptyRepository: req.body.initializeEmptyRepository === true });
     await sql`INSERT INTO requirements VALUES (${id},${title},${originalDescription},${""},${repositoryPath},${workspace.baseRef},${workspace.branchName},${workspace.workspacePath},${now},${now})`;
     res.json(
       requirement((await sql`SELECT * FROM requirements WHERE id=${id}`)[0]),
@@ -199,17 +206,18 @@ export async function startGateway({
   } else if (serveUI)
     app.use(express.static(path.resolve(import.meta.dir, "../../dist")));
   app.use((error, _req, res, _next) =>
-    res.status(error.status || 500).json({ error: redact(error.message) }),
+    res.status(error.status || 500).json({ error: redact(error.message), code: error.code }),
   );
   const server = await new Promise((resolve, reject) => {
     httpServer.once("error", reject);
     httpServer.listen(port, "127.0.0.1", () => resolve(httpServer));
   });
-  executor.setGatewayUrl(`http://127.0.0.1:${server.address().port}`);
+  llm.start();
   return {
     url: `http://127.0.0.1:${server.address().port}`,
     async close() {
-      await executor.close();
+      await llm.close();
+      await workspaces.close();
       await closeServer(server);
       await vite?.close();
       await sql.close();

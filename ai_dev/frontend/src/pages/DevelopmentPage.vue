@@ -23,6 +23,8 @@ try {
   const saved = localStorage.getItem(draftKey);
   if (saved !== null) { localDraft.value = saved; hasLocalDraft.value = true; }
 } catch { /* Browser storage may be disabled; the in-memory draft still works. */ }
+const backends = ref([]), newBackendId = ref("");
+const backendName = computed(() => backends.value.find(b => b.id === state.value.backendId)?.name || state.value.backendId);
 const chats = ref([]),
   composer = ref(null);
 const showWorkspace = ref(true),
@@ -70,7 +72,7 @@ async function add() {
   try {
     const c = await api(
       `/api/requirements/${props.requirement.id}/conversations`,
-      { title: `需求讨论 ${chats.value.length + 1}` },
+      { title: `需求讨论 ${chats.value.length + 1}`, backendId: newBackendId.value },
     );
     await refresh();
     await choose(c.id);
@@ -85,7 +87,7 @@ async function submit(message, skillNames) {
     firstSubmitting.value = true;
     error.value = "";
     try {
-      const result = await api(`/api/requirements/${props.requirement.id}/clarification`, { message, skillNames });
+      const result = await api(`/api/requirements/${props.requirement.id}/clarification`, { message, skillNames, backendId: newBackendId.value });
       await refresh();
       draftOpen.value = false;
       await select(result.conversationId);
@@ -122,6 +124,9 @@ function copy(turn) {
 }
 onMounted(async () => {
   try {
+    const configuration = await api("/api/backends");
+    backends.value = configuration.backends;
+    newBackendId.value = configuration.defaultBackendId;
     await refresh();
     if (hasLocalDraft.value && !clarification.value) draftOpen.value = true;
     else if (chats.value.length) await select((hasLocalDraft.value && clarification.value ? clarification.value : chats.value[0]).id);
@@ -155,6 +160,12 @@ onUnmounted(() => clearInterval(timer));
     <div class="dev-layout" :class="{ 'with-preview': showWorkspace }">
       <aside class="conversations">
         <strong>需求会话</strong>
+        <label v-if="backends.length > 1" class="backend-choice">新会话后端
+          <select v-model="newBackendId" aria-label="新会话后端">
+            <option v-for="backend in backends" :key="backend.id" :value="backend.id">{{ backend.name }}</option>
+          </select>
+        </label>
+        <small v-if="!draftOpen && backendName">当前后端：{{ backendName }}</small>
         <button v-if="!clarification" class="primary" :disabled="firstSubmitting" @click="openClarification">需求澄清</button>
         <button :disabled="firstSubmitting || !canCreateConversation" :title="canCreateConversation ? '独立对话 · 共享代码' : '请先完成需求澄清'" @click="add">新会话</button
         ><small>{{ canCreateConversation ? "独立对话 · 共享代码" : "请先完成需求澄清" }}</small
@@ -224,3 +235,8 @@ onUnmounted(() => clearInterval(timer));
     </div>
   </section>
 </template>
+
+<style scoped>
+.backend-choice { display: grid; gap: 6px; font-size: 12px; }
+.backend-choice select { max-width: 100%; padding: 8px; border: 1px solid #d9e2dd; border-radius: 6px; background: white; color: inherit; }
+</style>

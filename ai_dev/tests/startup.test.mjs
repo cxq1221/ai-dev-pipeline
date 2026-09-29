@@ -5,6 +5,7 @@ test("统一启动命令启动两个 Bun 服务并在退出时关闭端口", asy
     env: {
       ...process.env,
       DATABASE_URL: process.env.TEST_DATABASE_URL,
+      LLM_DATABASE_URL: process.env.TEST_DATABASE_URL,
       PORT: "4457",
       EXECUTOR_PORT: "4458",
       PREVIEW_PORT: "4459",

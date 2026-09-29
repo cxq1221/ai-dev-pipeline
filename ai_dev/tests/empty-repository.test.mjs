@@ -2,7 +2,7 @@ import { test, expect } from "bun:test";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { startExecutor } from "../backend/executor/http.mjs";
+import { startGateway } from "../backend/gateway/http.mjs";
 
 test("空仓库需明确确认，初始化不提交暂存或未跟踪文件", async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "forge-empty-"));
@@ -14,8 +14,8 @@ test("空仓库需明确确认，初始化不提交暂存或未跟踪文件", as
   await fs.writeFile(path.join(repo, "staged.txt"), "staged");
   git("add", "staged.txt");
   const before = git("status", "--porcelain").stdout.toString();
-  const ex = await startExecutor({ port: 0, previewPort: 0, workspaceRoot: path.join(root, "workspaces") });
-  const post = (body) => fetch(ex.url + "/workspaces", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ requirementId: "empty-test", repositoryPath: repo, ...body }) });
+  const ex = await startGateway({ databaseUrl: process.env.TEST_DATABASE_URL, port: 0, previewPort: 0, workspaceRoot: path.join(root, "workspaces") });
+  const post = (body) => fetch(ex.url + "/api/requirements", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: "空仓库", originalDescription: "准备工作区", repositoryPath: repo, ...body }) });
   try {
     const denied = await post({});
     expect(denied.status).toBe(409);

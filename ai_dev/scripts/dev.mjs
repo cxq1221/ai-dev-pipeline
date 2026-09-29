@@ -15,7 +15,7 @@ async function close(code = 0) {
 }
 for (const file of ["executor.mjs", "server.mjs"]) {
   const env = { ...process.env };
-  if (file === "server.mjs") delete env.DEEPSEEK_API_KEY;
+  if (file === "server.mjs") { delete env.DEEPSEEK_API_KEY; delete env.LLM_DATABASE_URL; }
   else delete env.DATABASE_URL;
   const p = Bun.spawn([process.execPath, "--no-env-file", file], {
     env,

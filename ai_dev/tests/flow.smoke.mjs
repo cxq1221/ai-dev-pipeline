@@ -1,18 +1,16 @@
 import { test, expect } from "bun:test";
 import path from "node:path";
 import { fixture, api, completeClarification } from "./helpers.mjs";
-import { startExecutor } from "../backend/executor/http.mjs";
+import { startLlmBackend } from "../backend/llm/http.mjs";
 import { startGateway } from "../backend/gateway/http.mjs";
 test("真实模型经网关修改需求代码并可预览", async () => {
   if (!process.env.DEEPSEEK_API_KEY) throw new Error("未配置真实模型");
   const f = await fixture();
-  const ex = await startExecutor({
+  const ex = await startLlmBackend({ databaseUrl: process.env.TEST_DATABASE_URL,
     port: 0,
-    previewPort: 0,
     dataRoot: path.join(f.root, "runtime"),
-    workspaceRoot: path.join(f.root, "workspaces"),
   });
-  const gw = await startGateway({
+  const gw = await startGateway({ previewPort: 0, workspaceRoot: path.join(f.root, "workspaces"),
     port: 0,
     executorUrl: ex.url,
     databaseUrl: process.env.TEST_DATABASE_URL,

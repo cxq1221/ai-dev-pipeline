@@ -1,21 +1,19 @@
 import { test, expect } from "bun:test";
 import { fixture, api, completeClarification } from "./helpers.mjs";
-import { startExecutor } from "../backend/executor/http.mjs";
+import { startLlmBackend } from "../backend/llm/http.mjs";
 import { modelServer } from "./model-server.mjs";
 import path from "node:path";
 
 test("创建需求后可从接口检索，重启网关后仍可访问", async () => {
   const { startGateway } = await import("../backend/gateway/http.mjs");
   const f = await fixture(), model = modelServer();
-  const ex = await startExecutor({
+  const ex = await startLlmBackend({ databaseUrl: process.env.TEST_DATABASE_URL,
     modelBaseUrl: model.url,
     dataRoot: path.join(f.root, "runtime"),
     port: 0,
-    previewPort: 0,
-    workspaceRoot: path.join(f.root, "workspaces"),
   });
   const options = {
-    port: 0,
+    previewPort: 0, workspaceRoot: path.join(f.root, "workspaces"),    port: 0,
     executorUrl: ex.url,
     databaseUrl: process.env.TEST_DATABASE_URL,
   };

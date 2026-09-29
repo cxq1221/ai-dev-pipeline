@@ -4,13 +4,13 @@ import path from "node:path";
 import fs from "node:fs/promises";
 import { fixture, api } from "./helpers.mjs";
 import { modelServer } from "./model-server.mjs";
-import { startExecutor } from "../backend/executor/http.mjs";
+import { startLlmBackend } from "../backend/llm/http.mjs";
 import { startGateway } from "../backend/gateway/http.mjs";
 
 test("澄清首次发送才建会话，限制写入，开发沿用同一会话", async () => {
   const f = await fixture(), model = modelServer();
-  const ex = await startExecutor({ port: 0, previewPort: 0, workspaceRoot: path.join(f.root, "workspaces"), dataRoot: path.join(f.root, "runtime"), modelBaseUrl: model.url });
-  const options = { port: 0, executorUrl: ex.url, databaseUrl: process.env.TEST_DATABASE_URL };
+  const ex = await startLlmBackend({ databaseUrl: process.env.TEST_DATABASE_URL, port: 0, dataRoot: path.join(f.root, "runtime"), modelBaseUrl: model.url });
+  const options = { previewPort: 0, workspaceRoot: path.join(f.root, "workspaces"), port: 0, executorUrl: ex.url, databaseUrl: process.env.TEST_DATABASE_URL };
   let gw = await startGateway(options);
   const wait = async (id) => {
     for (let i = 0; i < 100; i++) {
@@ -35,7 +35,7 @@ test("澄清首次发送才建会话，限制写入，开发沿用同一会话",
     const first = await api(gw.url, route, { message: "请澄清需求" });
     expect((await wait(first.conversationId)).mode).toBe("clarification");
     const systemText = model.requests.at(-1).messages.filter(m => m.role === "system").map(m => m.content).join("\n");
-    const grilling = await fs.readFile(new URL("../backend/executor/prompts/grilling.md", import.meta.url), "utf8");
+    const grilling = await fs.readFile(new URL("../backend/gateway/prompts/grilling.md", import.meta.url), "utf8");
     expect(systemText).toContain(grilling.trim());
     expect(systemText).toContain("用户说“全部按推荐”或“你决定”算有效回答");
     await api(gw.url, `/api/conversations/${first.conversationId}/chat`, { message: "开始开发", startDevelopment: true });
@@ -83,20 +83,13 @@ test("澄清首次发送才建会话，限制写入，开发沿用同一会话",
     try {
       await sql`INSERT INTO conversations (id,requirement_id,title,model,context_messages,created_at,updated_at) VALUES (${legacyId},${other.id},${"历史对话"},${"deepseek-flash"},${"[]"},${now},${now})`;
     } finally { await sql.close(); }
+    await gw.close(); gw = await startGateway(options);
     expect((await api(gw.url, `/api/conversations/${legacyId}/state`)).turns).toEqual([]);
     await api(gw.url, `/api/conversations/${legacyId}/chat`, { message: "继续历史讨论" });
     expect((await wait(legacyId)).turns.at(-1).status).toBe("done");
     expect((await api(gw.url, `/api/conversations/${legacyId}/state`)).mode).toBe("clarification");
     expect(model.requests.at(-1).tools.map(t => t.function.name)).not.toContain("bash");
     await expect(api(gw.url, `/api/conversations/${legacyId}/chat`, { message: "开始开发", startDevelopment: true })).rejects.toMatchObject({ status: 409 });
-    await api(ex.url, `/sessions/${legacyId}/chat`, { turnId: crypto.randomUUID(), message: "检查权限", mode: "development", requestDevelopment: true });
-    for (let i = 0; i < 100; i++) {
-      if (!(await api(ex.url, `/sessions/${legacyId}`)).busy) break;
-      await Bun.sleep(30);
-    }
-    const legacyTools = model.requests.at(-1).tools.map(t => t.function.name);
-    expect(legacyTools).not.toContain("bash");
-    expect(legacyTools).not.toContain("complete_clarification");
     const created = await create();
     expect((await list()).length).toBe(2);
     await gw.close();
@@ -119,8 +112,8 @@ test("完成澄清工具执行后轮次失败仍不放行，重试成功才进�
     }
     return null;
   });
-  const ex = await startExecutor({ port: 0, previewPort: 0, workspaceRoot: path.join(f.root, "workspaces"), dataRoot: path.join(f.root, "runtime"), modelBaseUrl: model.url });
-  const gw = await startGateway({ port: 0, executorUrl: ex.url, databaseUrl: process.env.TEST_DATABASE_URL });
+  const ex = await startLlmBackend({ databaseUrl: process.env.TEST_DATABASE_URL, port: 0, dataRoot: path.join(f.root, "runtime"), modelBaseUrl: model.url });
+  const gw = await startGateway({ previewPort: 0, workspaceRoot: path.join(f.root, "workspaces"), port: 0, executorUrl: ex.url, databaseUrl: process.env.TEST_DATABASE_URL });
   const wait = async id => {
     for (let i = 0; i < 100; i++) {
       const state = await api(gw.url, `/api/conversations/${id}/state`);

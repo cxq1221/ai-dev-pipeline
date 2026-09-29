@@ -29,7 +29,7 @@ test("执行进程被终止后显示中断，继续时不重放旧请求", async
     throw new Error("执行服务未启动");
   }
   await launch();
-  const gw = await startGateway({
+  const gw = await startGateway({ previewPort: 0, workspaceRoot: path.join(f.root, "workspaces"),
     port: 0,
     executorUrl: url,
     databaseUrl: process.env.TEST_DATABASE_URL,
@@ -50,6 +50,10 @@ test("执行进程被终止后显示中断，继续时不重放旧请求", async
     proc.kill("SIGKILL");
     await proc.exited;
     await launch();
+    for (let i = 0; i < 100; i++) {
+      if (!(await api(gw.url, `/api/conversations/${c.id}/state`)).busy) break;
+      await Bun.sleep(30);
+    }
     expect(
       (await api(gw.url, `/api/conversations/${c.id}/state`)).turns[0].status,
     ).toBe("interrupted");

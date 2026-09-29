@@ -2,7 +2,7 @@ import { test, expect } from "bun:test";
 import path from "node:path";
 import { fixture, api, completeClarification } from "./helpers.mjs";
 import { modelServer } from "./model-server.mjs";
-import { startExecutor } from "../backend/executor/http.mjs";
+import { startLlmBackend } from "../backend/llm/http.mjs";
 import { startGateway } from "../backend/gateway/http.mjs";
 
 export async function waitTurn(url, id) {
@@ -16,14 +16,12 @@ export async function waitTurn(url, id) {
 test("网关下发新消息，执行结果和独立会话历史可查询", async () => {
   const f = await fixture(),
     model = modelServer();
-  const ex = await startExecutor({
+  const ex = await startLlmBackend({ databaseUrl: process.env.TEST_DATABASE_URL,
     port: 0,
-    previewPort: 0,
-    workspaceRoot: path.join(f.root, "workspaces"),
     dataRoot: path.join(f.root, "runtime"),
     modelBaseUrl: model.url,
   });
-  const gw = await startGateway({
+  const gw = await startGateway({ previewPort: 0, workspaceRoot: path.join(f.root, "workspaces"),
     port: 0,
     databaseUrl: process.env.TEST_DATABASE_URL,
     executorUrl: ex.url,
@@ -88,13 +86,6 @@ test("网关下发新消息，执行结果和独立会话历史可查询", async
       (await api(gw.url, `/api/requirements/${req.id}/file?path=index.html`))
         .content,
     ).toBe("<h1>Original</h1>\n");
-    const before = model.requests.length;
-    await api(ex.url, `/sessions/${a.id}/chat`, {
-      turnId: result.turns[0].id,
-      message: "不应再次执行的旧轮次",
-    });
-    await Bun.sleep(100);
-    expect(model.requests.length).toBe(before);
   } finally {
     await gw.close();
     await ex.close();

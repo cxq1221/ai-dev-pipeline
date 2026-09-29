@@ -1,3 +1,5 @@
+> 历史设计/研究快照。2026-09-29 的后端独立化已调整目录、数据归属和执行接口；当前实现见 [ADR-0003](adr/0003-independent-llm-backend.md)、[HTTP 协议](LLM_HTTP_API.md) 与 [README](../README.md)。本文旧源码路径和行号仅供历史参考。
+
 # Oh My Pi：对 ai_dev 的设计参考
 
 调研日期：2026-09-29。对象为官方仓库 `can1357/oh-my-pi`，核对固定提交 [`fc671eba383f2a7208500836673b485c0dc7073d`](https://github.com/can1357/oh-my-pi/tree/fc671eba383f2a7208500836673b485c0dc7073d)。本次为官方文档与源码静态核查，未安装 OMP、运行其测试或进行模型效果基准测试。

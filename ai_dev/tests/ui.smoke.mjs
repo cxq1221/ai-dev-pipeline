@@ -2,25 +2,24 @@ import { test, expect } from "bun:test";
 import { chromium } from "playwright";
 import path from "node:path";
 import { fixture } from "./helpers.mjs";
-import { startExecutor } from "../backend/executor/http.mjs";
+import { startLlmBackend } from "../backend/llm/http.mjs";
 import { startGateway } from "../backend/gateway/http.mjs";
 import { modelServer } from "./model-server.mjs";
 
 test("浏览器从需求池创建需求并可刷新详情", async () => {
   const f = await fixture(),
     model = modelServer();
-  const ex = await startExecutor({
+  const ex = await startLlmBackend({ databaseUrl: process.env.TEST_DATABASE_URL,
     port: 0,
-    previewPort: 0,
-    workspaceRoot: path.join(f.root, "workspaces"),
     modelBaseUrl: model.url,
     dataRoot: path.join(f.root, "runtime"),
   });
-  const gw = await startGateway({
+  const gw = await startGateway({ previewPort: 0, workspaceRoot: path.join(f.root, "workspaces"),
     port: 0,
     databaseUrl: process.env.TEST_DATABASE_URL,
     executorUrl: ex.url,
     serveUI: true,
+    backends: [{ id: "local", name: "本机后端", url: ex.url }, { id: "alternate", name: "候选后端", url: ex.url }],
     defaultRepositoryPath: "/tmp/default-repo",
     repositoryPaths: ["/tmp/default-repo", f.repo],
   });
@@ -77,7 +76,7 @@ test("浏览器从需求池创建需求并可刷新详情", async () => {
     expect(await conversations()).toEqual([]);
     await page.getByRole('button', { name: '发送需求' }).click();
     await page.locator('.conversations button.active').filter({ hasText: '需求澄清' }).waitFor();
-    await page.getByText('用户消息： 先确认使用场景', { exact: false }).waitFor();
+    await page.getByText('已收到：先确认使用场景', { exact: false }).waitFor();
     expect((await page.getByLabel('编码需求').boundingBox()).height).toBeLessThanOrEqual(160);
     expect((await conversations()).length).toBe(1);
     expect(await newConversation.isDisabled()).toBe(true);
@@ -87,11 +86,11 @@ test("浏览器从需求池创建需求并可刷新详情", async () => {
     expect((await conversations()).length).toBe(1);
     expect((await page.getByLabel('编码需求').boundingBox()).height).toBeLessThanOrEqual(160);
     await page.reload();
-    await page.getByText('用户消息： 先确认使用场景', { exact: false }).waitFor();
+    await page.getByText('已收到：先确认使用场景', { exact: false }).waitFor();
     expect(await page.getByLabel('编码需求').inputValue()).toBe('');
     await page.getByLabel('编码需求').fill('尚未发送的补充说明');
     await page.reload();
-    await page.getByText('用户消息： 先确认使用场景', { exact: false }).waitFor();
+    await page.getByText('已收到：先确认使用场景', { exact: false }).waitFor();
     expect(await page.getByLabel('编码需求').inputValue()).toBe('尚未发送的补充说明');
     await page.getByLabel('编码需求').fill('');
     expect((await page.getByLabel('编码需求').boundingBox()).height).toBeLessThanOrEqual(160);
@@ -110,17 +109,19 @@ test("浏览器从需求池创建需求并可刷新详情", async () => {
     expect(await page.locator('.conversations button.active').innerText()).toBe('需求开发');
     expect(await newConversation.isEnabled()).toBe(true);
     await page.locator(".turn").filter({ has: page.getByText("自动开始开发", { exact: true }) }).locator(".markdown").filter({ hasText: "无需再次询问是否开始" }).waitFor();
+    await page.getByLabel("新会话后端").selectOption("alternate");
     await page
       .getByRole("button", { name: "新会话", exact: true })
       .click({ timeout: 3000 });
     await page.locator('.conversations button.active').filter({ hasText: '需求讨论 2' }).waitFor();
+    expect(await page.getByText("当前后端：候选后端", { exact: true }).count()).toBe(1);
     await page.getByLabel("编码需求").fill("检查页面");
     await page.locator('.skill-picker summary').click();
     await page.getByRole('checkbox', { name: /skill-maintenance/ }).check();
     expect(await page.locator('.skill-picker summary').innerText()).toContain('已选择 1 个');
     await page.locator('.skill-picker summary').click();
     await page.getByRole("button", { name: "发送需求" }).click();
-    await page.getByText("用户消息： 检查页面", { exact: false }).waitFor();
+    await page.locator(".markdown").filter({ hasText: "检查页面" }).waitFor();
     await page
       .frameLocator('iframe[title="运行预览"]')
       .getByRole("heading", { name: "Original" })
@@ -143,7 +144,9 @@ test("浏览器从需求池创建需求并可刷新详情", async () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.setViewportSize({width:1440,height:1000});
     expect(errors).toEqual([]);
-    await page.screenshot({ path: "/tmp/ai-dev-ui.png", fullPage: true });
+    await page.locator('.conversations button').filter({ hasText: '需求讨论 2' }).click();
+    await page.getByText("当前后端：候选后端", { exact: true }).waitFor();
+    await page.screenshot({ path: "/tmp/ai-dev-ui.png", fullPage: false });
   } finally {
     await browser.close();
     await gw.close();

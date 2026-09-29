@@ -1,3 +1,5 @@
+> 历史设计/研究快照。2026-09-29 的后端独立化已调整目录、数据归属和执行接口；当前实现见 [ADR-0003](adr/0003-independent-llm-backend.md)、[HTTP 协议](LLM_HTTP_API.md) 与 [README](../README.md)。本文旧源码路径和行号仅供历史参考。
+
 # ai_dev 本地最小工程设计
 
 日期：2026-09-29

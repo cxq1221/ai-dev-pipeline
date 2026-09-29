@@ -1,6 +1,8 @@
 ---
-status: accepted
+status: superseded by 0003
 ---
+
+> 本文保留历史决策；当前职责与数据归属见 [ADR-0003](0003-independent-llm-backend.md)。
 
 # 协作网关与 Pi 执行服务分离，正常对话增量下发
 

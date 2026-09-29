@@ -1,9 +1,10 @@
 import { test, expect } from "bun:test";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { fixture, api } from "./helpers.mjs";
+import { fixture, api, completeClarification } from "./helpers.mjs";
 import { modelServer } from "./model-server.mjs";
-import { startExecutor } from "../backend/executor/http.mjs";
+import { startGateway } from "../backend/gateway/http.mjs";
+import { startLlmBackend } from "../backend/llm/http.mjs";
 
 test("Skill 受控发现、手动注入、Agent 读写与下一轮重新加载", async () => {
   const f = await fixture();
@@ -21,25 +22,29 @@ test("Skill 受控发现、手动注入、Agent 读写与下一轮重新加载",
   await fs.writeFile(outside, "OUTSIDE_SECRET");
   await fs.symlink(outside, path.join(autoDir, "linked.txt"));
   let sequence = [];
-  const model = modelServer(() => sequence.shift() || null);
-  const ex = await startExecutor({ port: 0, previewPort: 0, skillsRoot, dataRoot: path.join(f.root, "runtime"), modelBaseUrl: model.url });
+  const model = modelServer(body => sequence.shift() || (body.messages.at(-1).role === "user" && body.tools?.some(t => t.function.name === "complete_clarification") ? { name: "complete_clarification", arguments: JSON.stringify({ content: "维护 Skill，验收读写与权限" }) } : null));
+  const ex = await startLlmBackend({ databaseUrl: process.env.TEST_DATABASE_URL, port: 0, dataRoot: path.join(f.root, "runtime"), modelBaseUrl: model.url });
+  const gw = await startGateway({ port: 0, previewPort: 0, skillsRoot, workspaceRoot: path.join(f.root, "workspaces"), databaseUrl: process.env.TEST_DATABASE_URL, executorUrl: ex.url });
+  let conversationId;
   const chat = async (message, skillNames = []) => {
-    await api(ex.url, "/sessions/skill-test/chat", { turnId: crypto.randomUUID(), message, skillNames, requirement: { original: "ORIGINAL_REQUIREMENT", clarified: "" } });
+    await api(gw.url, `/api/conversations/${conversationId}/chat`, { message, skillNames });
     for (let i = 0; i < 100; i++) {
-      const state = await api(ex.url, "/sessions/skill-test");
-      if (!state.busy) return state;
+      const state = await api(gw.url, `/api/conversations/${conversationId}/state`);
+      if (!state.busy) return { ...state, turn: state.turns.at(-1) };
       await Bun.sleep(30);
     }
     throw new Error("Skill 执行未结束");
   };
   const tool = (name, args) => ({ name, arguments: JSON.stringify(args) });
   try {
-    const catalog = await api(ex.url, "/skills");
+    const catalog = await api(gw.url, "/api/skills");
     expect(catalog.skills.map(s => s.name)).toEqual(["auto-check", "manual-check"]);
     expect(catalog.diagnostics.length).toBe(1);
-    await api(ex.url, "/sessions/skill-test", { workspacePath: f.repo });
+    const req = await api(gw.url, "/api/requirements", { title: "Skill", originalDescription: "ORIGINAL_REQUIREMENT", repositoryPath: f.repo });
+    await completeClarification(gw.url, req.id);
+    conversationId = (await api(gw.url, `/api/requirements/${req.id}/conversations`, { title: "维护 Skill" })).id;
     await chat("普通任务");
-    const initial = JSON.stringify(model.requests[0]);
+    const initial = JSON.stringify(model.requests.at(-1));
     expect(initial).toContain("AUTO_CATALOG_V1");
     expect(initial).not.toContain("AUTO_BODY_V1");
     expect(initial).not.toContain("MANUAL_ONLY");
@@ -61,5 +66,5 @@ test("Skill 受控发现、手动注入、Agent 读写与下一轮重新加载",
     expect(await fs.readFile(outside, "utf8")).toBe("OUTSIDE_SECRET");
     expect(JSON.stringify(model.requests)).not.toContain("OUTSIDE_SECRET");
     await expect(chat("错误选择", ["../../outside"])).rejects.toThrow("Skill 不存在");
-  } finally { await ex.close(); model.close(); }
+  } finally { await gw.close(); await ex.close(); model.close(); }
 }, 20000);

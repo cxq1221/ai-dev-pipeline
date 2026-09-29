@@ -4,8 +4,9 @@
 
 Local Vue/Bun/MySQL application using Pi Coding Agent. Run commands from `ai_dev/`.
 
-- `backend/gateway/` and `server.mjs`: requirements, conversations, MySQL persistence, and browser HTTP/SSE APIs.
-- `backend/executor/` and `executor.mjs`: Pi sessions, Git worktrees, tools, and static previews. Keep model credentials here and database configuration in the gateway.
+- `backend/gateway/` and `server.mjs`: requirements, conversations, business prompts/tools, workspaces/previews, application MySQL tables, and browser HTTP/SSE APIs.
+- `backend/llm/` and `executor.mjs`: generic chat/stop/session-query HTTP backend, Pi runtime, built-in tools, native contexts and execution persistence. Keep model credentials and `LLM_DATABASE_URL` here; gateway uses its own `DATABASE_URL`. Never read/write the other module's tables.
+- `backend/shared/`: filesystem and Skill format utilities; no requirements or stage rules.
 - `frontend/src/`: Vue pages, components, composables, and CSS assets.
 - `migrations/`: numbered, repeatable SQL files such as `002_conversations.sql`.
 - `tests/`: integration tests, smoke tests, and shared fixtures.
@@ -18,7 +19,8 @@ Prepare MySQL and configure `.env` using `.env.example`, then run:
 
 - `bun install`: install dependencies using `bun.lock`.
 - `bun run check:env`: validate local prerequisites.
-- `bun run db:migrate`: create application tables in the existing database.
+- `bun run db:migrate`: create application tables in the existing database. The LLM backend initializes its own tables on startup.
+- `bun run db:import-llm-context`: one-time import of legacy Pi contexts after stopping application tasks; retain source data.
 - `bun run dev`: start gateway and executor with Vite development support; open `http://127.0.0.1:4417`.
 - `bun run build`: build the frontend.
 - `bun run start`: run the application after building.

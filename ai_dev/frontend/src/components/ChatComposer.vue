@@ -129,7 +129,7 @@ defineExpose({
       </div>
     </form>
     <p class="hint">
-      Enter 发送 · Shift + Enter 换行<span>由 Pi Agent 驱动</span>
+      Enter 发送 · Shift + Enter 换行<span>AI 辅助开发</span>
     </p>
   </div>
   </div>

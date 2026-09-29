@@ -6,7 +6,7 @@ import { randomBytes } from "node:crypto";
 const target = path.resolve(import.meta.dir, "../.env.mysql");
 try {
   const password = randomBytes(24).toString("hex");
-  await fs.writeFile(target, `MYSQL_PASSWORD=${password}\nDATABASE_URL=mysql://ai_dev:${password}@127.0.0.1:33318/ai_dev?sslmode=require\n`, { flag: "wx", mode: 0o600 });
+  await fs.writeFile(target, `MYSQL_PASSWORD=${password}\nDATABASE_URL=mysql://ai_dev:${password}@127.0.0.1:33318/ai_dev?sslmode=require\nLLM_DATABASE_URL=mysql://ai_dev:${password}@127.0.0.1:33318/ai_dev?sslmode=require\n`, { flag: "wx", mode: 0o600 });
   console.log("已创建 .env.mysql（权限 600），未改动应用 .env。");
 } catch (error) {
   if (error.code !== "EEXIST") throw error;

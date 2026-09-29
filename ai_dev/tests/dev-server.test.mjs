@@ -1,7 +1,7 @@
 import { test, expect } from "bun:test";
 import { startGateway } from "../backend/gateway/http.mjs";
 test("开发模式直接提供 Vue 源码入口", async () => {
-  const gw = await startGateway({
+  const gw = await startGateway({ previewPort: 0,
     port: 0,
     databaseUrl: process.env.TEST_DATABASE_URL,
     serveUI: "development",

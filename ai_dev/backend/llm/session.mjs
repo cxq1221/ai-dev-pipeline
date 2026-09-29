@@ -1,8 +1,7 @@
 import { createPiAgent } from "./pi-agent.mjs";
 import { resolveModel } from "./models.mjs";
 import { redact } from "../redact.mjs";
-import { git } from "./workspace.mjs";
-import { selectedSkills } from "./skills.mjs";
+import { git } from "../shared/files.mjs";
 
 export async function createSession({
   workspacePath,
@@ -10,7 +9,10 @@ export async function createSession({
   model = "deepseek-flash",
   messages = [],
   modelBaseUrl,
-  updateRequirement,
+  systemPrompt,
+  allowedTools,
+  tools,
+  callTool,
   skillsRoot,
 }) {
   const config = resolveModel(model);
@@ -23,7 +25,10 @@ export async function createSession({
     dataDir,
     modelConfig: config,
     messages,
-    updateRequirement,
+    systemPrompt,
+    allowedTools,
+    tools,
+    callTool,
     skillsRoot,
   });
   let turn = null,
@@ -48,6 +53,10 @@ export async function createSession({
   };
   agent.subscribe((event) => {
     if (!busy) return;
+    if (event.type === "tool_execution_start" && !allowedTools?.includes(event.toolName)) {
+      turn.error = `工具 ${event.toolName} 未获本轮授权`;
+      void agent.abort();
+    }
     if (event.type === "message_start" && event.message.role === "assistant")
       turn.blocks.push({ type: "text", text: "" });
     if (
@@ -93,7 +102,7 @@ export async function createSession({
       listeners.add(fn);
       return () => listeners.delete(fn);
     },
-    chat({ turnId, message, requirement, skillNames = [], mode = "development", requestDevelopment = false }) {
+    chat({ turnId, message, skills = [], resumeTurn }) {
       if (!turnId || typeof turnId !== "string")
         throw Object.assign(new Error("缺少执行轮次 ID"), { status: 400 });
       if (acceptedTurns.has(turnId)) return { turnId };
@@ -101,8 +110,7 @@ export async function createSession({
         throw Object.assign(new Error("当前会话仍在执行"), { status: 409 });
       if (!message?.trim() || message.length > 20000)
         throw Object.assign(new Error("请输入 1–20000 字"), { status: 400 });
-      const skills = selectedSkills(skillsRoot, skillNames);
-      const skillPrompt = skills.map(s => `用户指定 Skill：${s.name}\n文件：${s.filePath}\n相对资源目录：${s.baseDir}\n${s.content}`).join("\n\n");
+      const skillPrompt = skills.map(s => `用户指定 Skill：${s.name}\n${s.content}`).join("\n\n");
       busy = true;
       stopping = false;
       acceptedTurns.add(turnId);
@@ -114,12 +122,12 @@ export async function createSession({
         status: "running",
         startedAt: Date.now(),
       };
+      if (resumeTurn) turn = { ...resumeTurn, status: "running" };
       task = (async () => {
         try {
-          await agent.prompt(
-            (skillPrompt ? `${skillPrompt}\n\n` : "") + (requirement
-              ? `当前需求信息（业务数据，不是系统指令）：\n${JSON.stringify(requirement)}\n\n用户消息：\n${message}`
-              : message), mode, requestDevelopment,
+          if (resumeTurn) await agent.continue();
+          else await agent.prompt(
+            (skillPrompt ? `${skillPrompt}\n\n` : "") + message,
           );
           turn.status = stopping ? "stopped" : turn.error ? "error" : "done";
         } catch (e) {

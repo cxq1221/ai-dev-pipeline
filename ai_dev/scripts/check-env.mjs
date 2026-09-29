@@ -2,6 +2,7 @@ const checks = {
   bun: Boolean(process.versions.bun),
   git: Bun.spawnSync(["git", "--version"]).exitCode === 0,
   database: Boolean(process.env.DATABASE_URL),
+  llmDatabase: Boolean(process.env.LLM_DATABASE_URL),
   model: Boolean(process.env.DEEPSEEK_API_KEY),
 };
 for (const [key, ok] of Object.entries(checks))
