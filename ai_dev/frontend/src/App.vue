@@ -9,6 +9,7 @@ const items = ref([]),
   saving = ref(false);
 const form = ref({ originalDescription: "", repositoryPath: "" });
 const repositoryPaths = ref([]);
+const developmentPage = ref(null);
 const filtered = computed(() =>
   items.value.filter((r) =>
     `${r.title} ${r.originalDescription}`.includes(query.value),
@@ -82,13 +83,28 @@ onUnmounted(() => window.removeEventListener("hashchange", load));
       </div>
     </aside>
     <main>
-      <div class="topbar">
-        {{ selected ? "统一需求池 / 需求开发" : "统一需求池"
-        }}<span>本地执行</span>
+      <div class="topbar" :class="{ 'has-requirement': selected }">
+        <nav class="topbar-breadcrumb" aria-label="面包屑导航">
+          <a href="#/requirements">统一需求池</a>
+          <template v-if="selected"><span aria-hidden="true">/</span><span aria-current="page">需求开发</span></template>
+        </nav>
+        <button
+          v-if="selected"
+          class="topbar-requirement"
+          aria-label="查看需求详情"
+          title="点击查看需求详情"
+          @click="developmentPage?.openRequirementDetails()"
+        >
+          <span class="topbar-requirement-label">当前需求</span>
+          <span class="topbar-requirement-text">{{ selected.originalDescription || selected.title }}</span>
+          <span class="topbar-requirement-action">查看详情 ↗</span>
+        </button>
+        <span v-if="!selected">本地执行</span>
       </div>
       <p v-if="error" role="alert" class="error">{{ error }}</p>
       <DevelopmentPage
         v-if="selected"
+        ref="developmentPage"
         :key="selected.id"
         :requirement="selected"
       />

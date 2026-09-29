@@ -1,5 +1,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed, nextTick } from "vue";
+import { marked } from "marked";
+import DOMPurify from "dompurify";
 import ChatTurn from "../components/ChatTurn.vue";
 import ChatComposer from "../components/ChatComposer.vue";
 import WorkspacePanel from "../components/WorkspacePanel.vue";
@@ -17,6 +19,13 @@ const clarificationTemplate = `【需求背景】（客户是谁，为什么要�
 2. Android：
 3. 后台API：
 4. 控制台：`;
+function renderMarkdown(text) {
+  return DOMPurify.sanitize(marked.parse(text || ""), {
+    FORBID_TAGS: ["img", "iframe", "style", "form", "input"],
+    FORBID_ATTR: ["style"],
+  });
+}
+const renderedSpec = computed(() => renderMarkdown(spec.value || "尚未生成澄清后的需求说明，完成需求澄清后将在此展示。"));
 const draftKey = `forge:clarification-draft:${props.requirement.id}`;
 const draftOpen = ref(false), firstSubmitting = ref(false), localDraft = ref(""), hasLocalDraft = ref(false);
 try {
@@ -26,6 +35,7 @@ try {
 const chats = ref([]),
   composer = ref(null);
 const showWorkspace = ref(true),
+  specDialog = ref(null),
   previewUrl = ref(""),
   spec = ref(props.requirement.clarifiedDescription);
 const { state, error, submitting, id, select, send, stop } = useSession();
@@ -139,19 +149,20 @@ onMounted(async () => {
   }
 });
 onUnmounted(() => clearInterval(timer));
+function openRequirementDetails() {
+  specDialog.value?.showModal();
+}
+defineExpose({ openRequirementDetails });
 </script>
 <template>
   <section class="development">
-    <small>REQUIREMENT / LOCAL WORKSPACE</small>
-    <h1>{{ requirement.title }}</h1>
-    <p class="mono">{{ requirement.branchName }}</p>
-    <button
-      v-if="!showWorkspace"
-      class="restore-preview"
-      @click="showWorkspace = true"
-    >
-      展开工作区 →
-    </button>
+    <header class="development-heading">
+      <div class="requirement-title-row">
+        <h1>{{ requirement.title }}</h1>
+      </div>
+      <button v-if="!showWorkspace" class="restore-preview" @click="showWorkspace = true">展开工作区 →</button>
+      <p class="mono">{{ requirement.branchName }}</p>
+    </header>
     <div class="dev-layout" :class="{ 'with-preview': showWorkspace }">
       <aside class="conversations">
         <strong>需求会话</strong>
@@ -169,14 +180,6 @@ onUnmounted(() => clearInterval(timer));
         </button>
       </aside>
       <div class="chat-area">
-        <details class="spec" open>
-          <summary>需求说明</summary>
-          <p>{{ requirement.originalDescription }}</p>
-          <div v-if="spec">
-            <strong>澄清后需求</strong>
-            <p class="spec-content">{{ spec }}</p>
-          </div>
-        </details>
         <section v-if="!clarification || draftOpen" class="clarification-guide">
           <h3>先把需求聊清楚</h3>
           <p>{{ clarificationTemplate }}</p>
@@ -223,4 +226,20 @@ onUnmounted(() => clearInterval(timer));
       />
     </div>
   </section>
+  <Teleport to="body">
+    <dialog ref="specDialog" class="spec-dialog" aria-labelledby="spec-title" @click="($event.target === specDialog) && specDialog.close()">
+      <section class="spec-panel">
+        <header class="spec-panel-heading">
+          <div><h2 id="spec-title">需求说明</h2><small>{{ requirement.title }}</small></div>
+          <button aria-label="关闭需求说明" autofocus @click="specDialog.close()">关闭 ✕</button>
+        </header>
+        <div class="spec-panel-content">
+          <h3>原始需求</h3>
+          <p class="spec-content">{{ requirement.originalDescription }}</p>
+          <h3>澄清后需求</h3>
+          <div class="markdown spec-markdown" v-html="renderedSpec"></div>
+        </div>
+      </section>
+    </dialog>
+  </Teleport>
 </template>
