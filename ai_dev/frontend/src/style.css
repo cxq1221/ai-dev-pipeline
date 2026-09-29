@@ -1,0 +1,264 @@
+:root {
+  font-family: "PingFang SC", "Helvetica Neue", sans-serif;
+  color: #223c34;
+  background: #f3f6f4;
+  font-size: 14px;
+  --accent: #196b52;
+  --muted: #70837a;
+  --line: #dfe7e2;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+button,
+a {
+  touch-action: manipulation;
+}
+button {
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: white;
+  border-radius: 8px;
+  padding: 10px 16px;
+}
+button:hover {
+  background: #edf4ef;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+button.primary {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+input,
+textarea {
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 8px;
+  padding: 12px;
+  max-width: 100%;
+}
+textarea {
+  resize: vertical;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #278866;
+  outline-offset: 3px;
+}
+h1 {
+  font-size: 28px;
+  letter-spacing: -0.6px;
+  margin: 12px 0;
+}
+h2 {
+  font-size: 20px;
+}
+p {
+  line-height: 1.7;
+  color: var(--muted);
+}
+small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+.app-shell {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  min-height: 100vh;
+}
+.sidebar {
+  padding: 28px 20px;
+  background: white;
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.brand b {
+  font: bold italic 35px Georgia;
+  color: white;
+  background: var(--accent);
+  border-radius: 12px;
+  padding: 0 12px;
+}
+.brand strong {
+  font-size: 28px;
+}
+.brand small {
+  font-size: 10px;
+}
+.workspace-label {
+  padding: 16px 12px;
+  background: #f3f6f4;
+  border-radius: 9px;
+  line-height: 1.8;
+}
+.nav-active {
+  background: #e7f2ec;
+  padding: 14px;
+  border-radius: 9px;
+  font-weight: 600;
+}
+.sidebar-foot {
+  margin-top: auto;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 2;
+  letter-spacing: 1px;
+}
+.topbar {
+  height: 64px;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+  padding: 22px 32px;
+  display: flex;
+  justify-content: space-between;
+}
+.topbar span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.pool,
+.development {
+  padding: 32px;
+}
+.page-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 30px;
+}
+.page-heading small {
+  letter-spacing: 2px;
+}
+.pool > input {
+  width: 320px;
+  margin-bottom: 20px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+}
+th,
+td {
+  text-align: left;
+  padding: 16px;
+  border-bottom: 1px solid var(--line);
+}
+th {
+  font-size: 12px;
+  color: var(--muted);
+}
+td small {
+  margin-top: 8px;
+  max-width: 420px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.mono {
+  font-family: Menlo, monospace;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.error {
+  color: #a23e27;
+  background: #fff0e8;
+  padding: 12px 20px;
+}
+.empty {
+  padding: 40px;
+  text-align: center;
+}
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: #193b3466;
+  display: grid;
+  place-items: center;
+  z-index: 20;
+}
+.modal {
+  background: white;
+  border-radius: 16px;
+  padding: 28px;
+  width: 560px;
+  max-width: 95vw;
+}
+.modal label {
+  display: block;
+  margin: 18px 0;
+}
+.modal input,
+.modal textarea {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+}
+.modal footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+@media (max-width: 900px) {
+  .app-shell {
+    grid-template-columns: 160px minmax(0, 1fr);
+  }
+  .sidebar {
+    padding: 20px 12px;
+  }
+  .brand strong {
+    font-size: 22px;
+  }
+  .pool,
+  .development {
+    padding: 20px;
+  }
+  td.mono {
+    display: none;
+  }
+}
+@media (max-width: 600px) {
+  .app-shell {
+    display: block;
+  }
+  .sidebar {
+    display: none;
+  }
+  .topbar {
+    padding: 20px;
+  }
+  .page-heading {
+    gap: 12px;
+  }
+  table {
+    font-size: 12px;
+  }
+}

@@ -1,0 +1,22 @@
+name: ai-dev-db
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:33318:3306"
+    environment:
+      MYSQL_DATABASE: ai_dev
+      MYSQL_USER: ai_dev
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Run bun scripts/setup-mysql.mjs first}
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=$$MYSQL_PASSWORD mysql -h 127.0.0.1 -u ai_dev -D ai_dev -e 'SELECT 1' >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+volumes:
+  mysql-data:

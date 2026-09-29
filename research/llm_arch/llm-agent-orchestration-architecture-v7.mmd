@@ -1,0 +1,51 @@
+flowchart TB
+    U[统一 AI 对话<br/>需求澄清 · 执行追问 · 进度 · 风险 · 结果]
+    G[Agent 统一调度网关<br/>会话关联 · 上下文组装 · 意图路由 · 执行状态协调 · 证据关联<br/>能力匹配 · 选机 · 排队 · 任务租约 · 故障切换<br/>自身不直接调用 LLM]
+    E[任务状态与证据<br/>事件 · 日志 · 测试 · 产物 · 执行快照]
+
+    U --> G
+    G --> E
+
+    subgraph M[异构执行机器池 · PC / macOS / Linux]
+        A[主执行 Agent<br/>机器端调用 LLM<br/>计划 → 执行 → 验证]
+
+        subgraph C[执行能力]
+            C1[任务编排<br/>计划 · 依赖 · 重试]
+            C2[代码开发<br/>读写代码 · Git · PR]
+            C3[构建与测试<br/>单测 · 集成 · 诊断]
+            C4[控制 App<br/>浏览器 · IDE · 桌面 UI<br/>模拟触控 · USB 协议 · 外设/HID]
+        end
+
+        T[本机工具与操作系统<br/>Shell · Git · 编译器 · 测试框架 · UI 自动化 · 文件系统]
+
+        subgraph R[目标 App / SDK 运行时 · 随执行机器部署]
+            APP[目标 App / Demo / 游戏<br/>真实用户流程与运行环境]
+            SDK[预置 SDK]
+            SR[SDK Runner<br/>轻量 · 受限 · 可观测]
+            WL[SDK / 设备能力白名单]
+            APP --> SDK --> SR --> WL
+        end
+
+        A --> C1
+        A --> C2
+        A --> C3
+        A --> C4
+        C1 --> T
+        C2 --> T
+        C3 --> T
+        C4 --> T
+        A ==>|版本化协议 · 受控指令| SR
+        SR -.->|状态 · 事件 · 诊断证据| A
+    end
+
+    G ==>|能力匹配 · 选机 · 任务租约 · 执行快照| A
+    A -.->|同一会话：追问 · 进度 · 风险 · 结果| G
+
+    classDef control fill:#eaf2ff,stroke:#9abbe9,color:#20314d;
+    classDef agent fill:#684bd5,stroke:#684bd5,color:#ffffff;
+    classDef capability fill:#eaf9f2,stroke:#9fd9be,color:#20314d;
+    classDef neutral fill:#f3f6fa,stroke:#cbd5e2,color:#20314d;
+    class U control;
+    class G,A,SR agent;
+    class C1,C2,C3,C4 capability;
+    class E,T,APP,SDK,WL neutral;
