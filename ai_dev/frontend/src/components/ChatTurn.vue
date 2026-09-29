@@ -8,6 +8,7 @@ const props = defineProps({
 });
 const emit = defineEmits(["undo", "review", "copy", "retry"]);
 const labels = {
+  queued: "准备开发",
   running: "正在开发",
   done: "已完成",
   error: "执行失败",
@@ -39,7 +40,7 @@ function markdown(text) {
 <template>
   <article class="turn">
     <div class="user-line">
-      <div class="user-bubble">{{ turn.prompt }}</div>
+      <div class="user-bubble">{{ turn.id.startsWith("auto-") ? "自动开始开发" : turn.prompt }}</div>
     </div>
     <div class="turn-meta">
       <span :class="{ pulse: turn.status === 'running' }">{{

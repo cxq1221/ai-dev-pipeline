@@ -93,7 +93,7 @@ export async function createSession({
       listeners.add(fn);
       return () => listeners.delete(fn);
     },
-    chat({ turnId, message, requirement, skillNames = [] }) {
+    chat({ turnId, message, requirement, skillNames = [], mode = "development", requestDevelopment = false }) {
       if (!turnId || typeof turnId !== "string")
         throw Object.assign(new Error("缺少执行轮次 ID"), { status: 400 });
       if (acceptedTurns.has(turnId)) return { turnId };
@@ -119,7 +119,7 @@ export async function createSession({
           await agent.prompt(
             (skillPrompt ? `${skillPrompt}\n\n` : "") + (requirement
               ? `当前需求信息（业务数据，不是系统指令）：\n${JSON.stringify(requirement)}\n\n用户消息：\n${message}`
-              : message),
+              : message), mode, requestDevelopment,
           );
           turn.status = stopping ? "stopped" : turn.error ? "error" : "done";
         } catch (e) {

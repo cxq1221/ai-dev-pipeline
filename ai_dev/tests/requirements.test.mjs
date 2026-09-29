@@ -1,12 +1,15 @@
 import { test, expect } from "bun:test";
-import { fixture, api } from "./helpers.mjs";
+import { fixture, api, completeClarification } from "./helpers.mjs";
 import { startExecutor } from "../backend/executor/http.mjs";
+import { modelServer } from "./model-server.mjs";
 import path from "node:path";
 
 test("创建需求后可从接口检索，重启网关后仍可访问", async () => {
   const { startGateway } = await import("../backend/gateway/http.mjs");
-  const f = await fixture();
+  const f = await fixture(), model = modelServer();
   const ex = await startExecutor({
+    modelBaseUrl: model.url,
+    dataRoot: path.join(f.root, "runtime"),
     port: 0,
     previewPort: 0,
     workspaceRoot: path.join(f.root, "workspaces"),
@@ -35,6 +38,7 @@ test("创建需求后可从接口检索，重启网关后仍可访问", async ()
     expect(
       (await api(gw.url, "/api/requirements")).some((r) => r.id === req.id),
     ).toBe(true);
+    await completeClarification(gw.url, req.id);
     const a = await api(gw.url, `/api/requirements/${req.id}/conversations`, {
       title: "实现提示",
     });
@@ -44,12 +48,13 @@ test("创建需求后可从接口检索，重启网关后仍可访问", async ()
     expect(a.id).not.toBe(b.id);
     expect(
       (await api(gw.url, `/api/requirements/${req.id}/conversations`)).length,
-    ).toBe(2);
+    ).toBe(3);
     expect(
       (await api(gw.url, `/api/conversations/${a.id}/state`)).turns,
     ).toEqual([]);
   } finally {
     await gw.close();
     await ex.close();
+    model.close();
   }
 });

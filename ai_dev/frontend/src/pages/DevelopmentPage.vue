@@ -1,16 +1,55 @@
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from "vue";
+import { ref, onMounted, onUnmounted, computed, nextTick } from "vue";
 import ChatTurn from "../components/ChatTurn.vue";
 import ChatComposer from "../components/ChatComposer.vue";
 import WorkspacePanel from "../components/WorkspacePanel.vue";
 import { api, useSession } from "../composables/useSession.js";
 const props = defineProps({ requirement: Object });
+const clarificationTemplate = `【需求背景】（客户是谁，为什么要做，有什么收益？）
+1.
+2.
+
+【交付时间】（预期交付时间）
+1.
+
+【功能列表】（列出用户可理解的功能点，并列出平台）
+1. iOS：通过 SDK 可以截图并保存到相册
+2. Android：
+3. 后台API：
+4. 控制台：`;
+const draftKey = `forge:clarification-draft:${props.requirement.id}`;
+const draftOpen = ref(false), firstSubmitting = ref(false), localDraft = ref(""), hasLocalDraft = ref(false);
+try {
+  const saved = localStorage.getItem(draftKey);
+  if (saved !== null) { localDraft.value = saved; hasLocalDraft.value = true; }
+} catch { /* Browser storage may be disabled; the in-memory draft still works. */ }
 const chats = ref([]),
   composer = ref(null);
 const showWorkspace = ref(true),
   previewUrl = ref(""),
   spec = ref(props.requirement.clarifiedDescription);
 const { state, error, submitting, id, select, send, stop } = useSession();
+const clarification = computed(() => chats.value.find(c => c.isClarification));
+const selectedClarification = computed(() => clarification.value?.id === id.value);
+const canCreateConversation = computed(() => clarification.value?.mode === "development"
+  || (selectedClarification.value && state.value.mode === "development"));
+function saveDraft(value) {
+  if (!draftOpen.value && !selectedClarification.value) return;
+  localDraft.value = value;
+  hasLocalDraft.value = true;
+  try { localStorage.setItem(draftKey, value); } catch { error.value = "浏览器无法保存本地草稿，请不要刷新页面。"; }
+}
+async function openClarification() {
+  if (clarification.value) {
+    draftOpen.value = false;
+    await select(clarification.value.id);
+  } else {
+    if (!hasLocalDraft.value) localDraft.value = clarificationTemplate;
+    draftOpen.value = true;
+    saveDraft(localDraft.value);
+  }
+}
+async function choose(value) { draftOpen.value = false; await select(value); }
 const panelState = computed(() => ({
   ...state.value,
   session: props.requirement.id,
@@ -26,19 +65,50 @@ async function refresh() {
   );
 }
 async function add() {
+  if (firstSubmitting.value || !canCreateConversation.value) return;
+  firstSubmitting.value = true;
   try {
     const c = await api(
       `/api/requirements/${props.requirement.id}/conversations`,
       { title: `需求讨论 ${chats.value.length + 1}` },
     );
     await refresh();
-    await select(c.id);
+    await choose(c.id);
   } catch (e) {
     error.value = e.message;
-  }
+  } finally { firstSubmitting.value = false; }
 }
 async function submit(message, skillNames) {
-  if (await send(message, skillNames)) composer.value?.clear(message);
+  if (firstSubmitting.value || submitting.value) return;
+  let success = false;
+  if (draftOpen.value) {
+    firstSubmitting.value = true;
+    error.value = "";
+    try {
+      const result = await api(`/api/requirements/${props.requirement.id}/clarification`, { message, skillNames });
+      await refresh();
+      draftOpen.value = false;
+      await select(result.conversationId);
+      await nextTick();
+      success = true;
+    } catch (e) {
+      // Keep the draft on failure, and reconnect to any session already created.
+      try { await refresh(); if (clarification.value) await choose(clarification.value.id); } catch {}
+      error.value = e.message;
+    } finally { firstSubmitting.value = false; }
+  } else success = await send(message, skillNames);
+  if (success) {
+    composer.value?.clear(message);
+    await nextTick();
+    if (selectedClarification.value) {
+      localDraft.value = "";
+      hasLocalDraft.value = false;
+      try { localStorage.removeItem(draftKey); } catch {}
+    }
+  }
+}
+async function beginDevelopment() {
+  if (await send("开始开发", [], true)) await refresh();
 }
 function copy(turn) {
   navigator.clipboard
@@ -53,10 +123,12 @@ function copy(turn) {
 onMounted(async () => {
   try {
     await refresh();
-    if (chats.value.length) await select(chats.value[0].id);
+    if (hasLocalDraft.value && !clarification.value) draftOpen.value = true;
+    else if (chats.value.length) await select((hasLocalDraft.value && clarification.value ? clarification.value : chats.value[0]).id);
     previewUrl.value = (await workspaceApi("/api/preview")).url;
     timer = setInterval(async () => {
       try {
+        await refresh();
         spec.value = (
           await api(`/api/requirements/${props.requirement.id}`)
         ).clarifiedDescription;
@@ -82,15 +154,18 @@ onUnmounted(() => clearInterval(timer));
     </button>
     <div class="dev-layout" :class="{ 'with-preview': showWorkspace }">
       <aside class="conversations">
-        <strong>需求会话</strong><button @click="add">新会话</button
-        ><small>独立对话 · 共享代码</small
+        <strong>需求会话</strong>
+        <button v-if="!clarification" class="primary" :disabled="firstSubmitting" @click="openClarification">需求澄清</button>
+        <button :disabled="firstSubmitting || !canCreateConversation" :title="canCreateConversation ? '独立对话 · 共享代码' : '请先完成需求澄清'" @click="add">新会话</button
+        ><small>{{ canCreateConversation ? "独立对话 · 共享代码" : "请先完成需求澄清" }}</small
         ><button
           v-for="c in chats"
           :key="c.id"
-          :class="{ active: c.id === id }"
-          @click="select(c.id)"
+          :class="{ active: !draftOpen && c.id === id }"
+          :disabled="firstSubmitting"
+          @click="choose(c.id)"
         >
-          {{ c.title }}
+          {{ c.isClarification ? ((c.id === id ? state.mode : c.mode) === 'development' ? '需求开发' : '需求澄清') : c.title }}
         </button>
       </aside>
       <div class="chat-area">
@@ -102,8 +177,13 @@ onUnmounted(() => clearInterval(timer));
             <p class="spec-content">{{ spec }}</p>
           </div>
         </details>
-        <p v-if="!id" class="empty">创建一个会话，开始与 Pi 一起开发。</p>
-        <div class="turns">
+        <section v-if="!clarification || draftOpen" class="clarification-guide">
+          <h3>先把需求聊清楚</h3>
+          <p>{{ clarificationTemplate }}</p>
+          <button v-if="!draftOpen" class="primary" :disabled="firstSubmitting" @click="openClarification">需求澄清</button>
+          <small>{{ draftOpen ? "草稿仅保存在本浏览器，首次发送后才创建会话并调用 AI。" : "点击后可编辑引导内容；未发送不会创建澄清会话。" }}</small>
+        </section>
+        <div v-if="!draftOpen" class="turns">
           <ChatTurn
             v-for="t in state.turns"
             :key="t.id"
@@ -113,16 +193,25 @@ onUnmounted(() => clearInterval(timer));
           />
         </div>
         <ChatComposer
-          v-if="id"
+          v-if="id || draftOpen"
+          :key="draftOpen ? 'clarification-draft' : id"
           ref="composer"
-          :busy="state.busy"
+          :busy="draftOpen ? false : state.busy"
           :configured="true"
-          :submitting="submitting"
+          :submitting="submitting || firstSubmitting"
+          :initial-draft="draftOpen || selectedClarification ? localDraft : ''"
+          :clarification="draftOpen || (selectedClarification && state.mode === 'clarification' && state.turns.length === 0)"
           :error="error"
           :model="state.model"
           @send="submit"
           @stop="stop"
-        />
+          @draft-change="saveDraft"
+        >
+          <div v-if="draftOpen || state.mode" class="composer-phase">
+            <span>{{ draftOpen || state.mode === 'clarification' ? '澄清中 · 不修改代码' : '开发中' }}</span>
+            <button v-if="!draftOpen && selectedClarification && state.mode === 'clarification'" type="button" class="primary" :disabled="state.busy || submitting || firstSubmitting" title="请 AI 检查需求是否已澄清，未完成时继续提问" @click="beginDevelopment">开始开发 →</button>
+          </div>
+        </ChatComposer>
         <p v-else-if="error" role="alert">{{ error }}</p>
       </div>
       <WorkspacePanel

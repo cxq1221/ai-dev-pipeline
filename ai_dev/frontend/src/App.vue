@@ -8,6 +8,7 @@ const items = ref([]),
   query = ref(""),
   saving = ref(false);
 const form = ref({ originalDescription: "", repositoryPath: "" });
+const repositoryPaths = ref([]);
 const filtered = computed(() =>
   items.value.filter((r) =>
     `${r.title} ${r.originalDescription}`.includes(query.value),
@@ -58,6 +59,7 @@ async function create() {
 }
 onMounted(() => {
   api("/api/config").then((config) => {
+    repositoryPaths.value = config.repositoryPaths || [];
     if (!form.value.repositoryPath) form.value.repositoryPath = config.defaultRepositoryPath || "";
   }).catch((e) => { error.value = e.message; });
   load();
@@ -136,6 +138,12 @@ onUnmounted(() => window.removeEventListener("hashchange", load));
           maxlength="255"
           rows="4"
         ></textarea></label
+      ><label
+        v-if="repositoryPaths.length > 1"
+        >预置仓库<select aria-label="预置仓库" :value="form.repositoryPath" @change="form.repositoryPath = $event.target.value">
+          <option value="" disabled>选择预置仓库，或在下方输入路径</option>
+          <option v-for="p in repositoryPaths" :key="p" :value="p">{{ p }}</option>
+        </select></label
       ><label
         >本地 Git 仓库路径<input
           v-model="form.repositoryPath"

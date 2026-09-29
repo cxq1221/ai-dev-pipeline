@@ -29,3 +29,21 @@ export async function api(url, route, body, method = body ? "POST" : "GET") {
     throw Object.assign(new Error(data.error), { status: response.status });
   return data;
 }
+
+export async function completeClarification(url, requirementId) {
+  const { conversationId } = await api(url, `/api/requirements/${requirementId}/clarification`, { message: "需求已确认" });
+  const wait = async () => {
+    for (let i = 0; i < 240; i++) {
+      const state = await api(url, `/api/conversations/${conversationId}/state`);
+      if (!state.busy) {
+        if (state.turns.at(-1)?.status !== "done") throw new Error("澄清执行失败");
+        return;
+      }
+      await Bun.sleep(500);
+    }
+    throw new Error("澄清执行超时");
+  };
+  await wait();
+  await api(url, `/api/conversations/${conversationId}/chat`, { message: "开始开发", startDevelopment: true });
+  await wait();
+}

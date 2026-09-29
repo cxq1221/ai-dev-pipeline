@@ -1,7 +1,13 @@
 .development {
   position: relative;
 }
+.clarification-guide { padding: 22px 24px; background: #f0f7f3; border-bottom: 1px solid var(--line); }
+.clarification-guide h3 { margin: 0 0 12px; }
+.clarification-guide p { line-height: 1.8; white-space: pre-wrap; }
+.clarification-guide small { display: block; margin-top: 12px; color: #697d74; }
 .skill-picker { padding: 8px 0; font-size: 12px; overflow-wrap: anywhere; }
+.composer-phase { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; flex-shrink: 0; padding: 0 0 8px; border-bottom: 1px solid #e2eae5; color: var(--accent); font-size: 12px; }
+.composer-phase button { padding: 5px 10px; font-size: 12px; border-radius: 8px; }
 .skill-picker summary { cursor: pointer; color: var(--accent); }
 .skill-picker p { font-size: 12px; }
 .skill-option { display: flex; gap: 8px; align-items: flex-start; padding: 6px 0; }
@@ -52,10 +58,25 @@
 }
 .compose-wrap {
   max-width: none;
-  padding: 16px;
-  position: sticky;
-  bottom: 0;
-  background: #fff;
+  padding: 0;
+  position: fixed;
+  z-index: 20;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  background: transparent;
+  max-height: calc(100dvh - 32px);
+  display: flex;
+  flex-direction: column;
+}
+.composer-anchor { width: 100%; }
+.compose-wrap #composer { display: flex; flex-direction: column; min-height: 0; box-shadow: 0 8px 36px #213a2926; }
+.compose-wrap #composer textarea { height: clamp(100px, 16dvh, 160px); min-height: 60px; max-height: none; flex-shrink: 1; }
+.compose-wrap.clarification-composer #composer textarea { height: clamp(240px, 38dvh, 440px); }
+.compose-wrap .skill-picker { max-height: 22dvh; overflow: auto; flex-shrink: 0; }
+.compose-wrap .compose-bottom { flex-shrink: 0; }
+.compose-wrap .hint { background: #f2f6f3; margin: 4px 12px 0; padding: 3px 6px; border-radius: 5px; }
+.compose-wrap #error { max-height: 15dvh; overflow: auto; flex-shrink: 0; }
+@media (max-width: 600px) {
+  .compose-wrap.clarification-composer #composer textarea { height: clamp(200px, 32dvh, 320px); }
 }
 .user-bubble {
   background: #eaf3ed;

@@ -15,15 +15,27 @@ export async function startGateway({
   executorUrl = "http://127.0.0.1:4418",
   serveUI = false,
   defaultRepositoryPath = process.env.DEFAULT_REPOSITORY_PATH || "",
+  repositoryPaths = (process.env.REPOSITORY_PATHS || "").split(","),
 } = {}) {
   const sql = await connect(databaseUrl);
   await migrate(sql);
   const app = express();
   app.use(localOnly());
   app.use(express.json());
-  app.get("/api/config", (_req, res) => res.json({ defaultRepositoryPath }));
+  app.get("/api/config", (_req, res) => res.json({ defaultRepositoryPath, repositoryPaths: [...new Set([defaultRepositoryPath, ...repositoryPaths].map(p => p.trim()).filter(Boolean))] }));
   const chats = conversations(sql);
   const executor = executorClient(executorUrl, chats, sql);
+  app.post("/api/requirements/:id/clarification", async (req, res) => {
+    const { message } = req.body;
+    if (typeof message !== "string" || !message.trim() || message.length > 20000)
+      return res.status(400).json({ error: "请先填写澄清消息（1–20000 字）" });
+    const id = await chats.clarification(req.params.id);
+    // A failed dispatch retains the user's attempted session for retry.
+    try {
+      const result = await executor.chat(id, message, req.body.skillNames);
+      res.json({ ...result, conversationId: id });
+    } catch (e) { res.status(e.status || 500).json({ error: redact(e.message), conversationId: id }); }
+  });
   app.get("/api/skills", async (_req, res) => res.json(await executor.request("/skills")));
   app.get("/api/requirements/:id/conversations", async (req, res) =>
     res.json(await chats.list(req.params.id)),
@@ -34,15 +46,20 @@ export async function startGateway({
     if (!r) return res.status(404).json({ error: "需求不存在" });
     res.json(await chats.create(req.params.id, req.body.title || "需求讨论"));
   });
+  app.get("/api/conversations/:id/mode", async (req, res) => {
+    const c = await chats.get(req.params.id);
+    res.json({ mode: c.mode, isClarification: Boolean(c.isClarification) });
+  });
   app.get("/api/conversations/:id/state", async (req, res) =>
     res.json(await executor.state(req.params.id)),
   );
   app.post("/api/conversations/:id/chat", async (req, res) =>
-    res.json(await executor.chat(req.params.id, req.body.message, req.body.skillNames)),
+    res.json(await executor.chat(req.params.id, req.body.message, req.body.skillNames, req.body.startDevelopment === true)),
   );
-  app.post("/api/conversations/:id/stop", async (req, res) =>
-    res.json(await executor.request(`/sessions/${req.params.id}/stop`, {})),
-  );
+  app.post("/api/conversations/:id/stop", async (req, res) => {
+    await sql`UPDATE turns SET status='stopped',finished_at=${Date.now()} WHERE conversation_id=${req.params.id} AND status='queued'`;
+    res.json(await executor.request(`/sessions/${req.params.id}/stop`, {}));
+  });
   app.get("/api/conversations/:id/events", async (req, res) => {
     await chats.get(req.params.id);
     res.setHeader("Content-Type", "text/event-stream");

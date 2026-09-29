@@ -20,7 +20,12 @@ export function modelServer(toolForRequest) {
       const update = last?.role !== "tool" && text?.includes("更新说明");
       const write = last?.role !== "tool" && text?.match(/写入 (\w+\.txt)/);
       const overwrite = last?.role !== "tool" && text?.includes("直接覆盖首页");
-      const tool = toolForRequest ? toolForRequest(body) : update
+      const canComplete = last?.role === "user" && text?.includes("开始开发")
+        && body.tools?.some(t => t.function.name === "complete_clarification")
+        && body.messages.some(m => m.role === "user" && /全部按推荐|你决定|需求已确认/.test(JSON.stringify(m.content)));
+      const tool = toolForRequest ? toolForRequest(body) : canComplete
+        ? { name: "complete_clarification", arguments: JSON.stringify({ content: "目标：实现页面；范围：当前首页；关键行为：按已接受的推荐实现；验收：页面正确展示。" }) }
+        : update
         ? {
             name: "update_requirement",
             arguments: JSON.stringify({
@@ -36,6 +41,7 @@ export function modelServer(toolForRequest) {
               }),
             }
           : null;
+      if (tool instanceof Response) return tool;
       const delta = tool
         ? {
             role: "assistant",

@@ -4,7 +4,20 @@ export function executorClient(url, chats, sql) {
     submitting = new Set();
   const knownSpecs = new Map();
   let gatewayUrl;
-  let closed = false;
+  let closed = false, queueTimer, queueTask;
+  async function dispatchQueued() {
+    const queued = await sql`SELECT id, conversation_id, prompt FROM turns WHERE status='queued' ORDER BY started_at LIMIT 10`;
+    for (const turn of queued) {
+      if (closed) break;
+      try {
+        await client.chat(turn.conversation_id, turn.prompt, [], false, turn.id);
+      } catch (e) {
+        if (e.status === 409) continue;
+        await chats.save(turn.conversation_id, { busy: false, turn: { id: turn.id, status: "error", blocks: [], error: e.message, finishedAt: Date.now() } });
+      }
+    }
+  }
+
   async function request(route, body) {
     const r = await fetch(url + route, {
       signal: AbortSignal.timeout(15000),
@@ -50,12 +63,16 @@ export function executorClient(url, chats, sql) {
       if (watching.get(id)?.controller === controller) watching.delete(id);
     });
   }
-  return {
+  const client = {
     request,
     setGatewayUrl(value) {
       gatewayUrl = value;
+      queueTimer = setInterval(() => {
+        if (closed || queueTask) return;
+        queueTask = dispatchQueued().catch(() => console.warn("自动开发任务调度失败，将重试")).finally(() => { queueTask = null; });
+      }, 200);
     },
-    async chat(id, message, skillNames = []) {
+    async chat(id, message, skillNames = [], startDevelopment = false, queuedTurnId = null) {
       if (!Array.isArray(skillNames) || skillNames.length > 10 || skillNames.some(n => typeof n !== "string"))
         throw Object.assign(new Error("Skill 选择无效"), { status: 400 });
       skillNames = [...new Set(skillNames)];
@@ -77,23 +94,27 @@ export function executorClient(url, chats, sql) {
         const c = await chats.get(id),
           [r] =
             await sql`SELECT * FROM requirements WHERE id=${c.requirement_id}`;
-        if ((await chats.state(id)).busy)
+        const current = await chats.state(id);
+        if (current.turns.some(t => (t.status === "running" || t.status === "queued") && t.id !== queuedTurnId))
           throw Object.assign(new Error("当前会话仍在执行"), { status: 409 });
-        try {
-          await request(`/sessions/${id}`);
-        } catch (e) {
-          if (e.status !== 404) throw e;
-          await request(`/sessions/${id}`, {
-            requirementId: r.id,
-            workspacePath: r.workspace_path,
-            model: c.model,
-            messages: c.context_messages,
-            gatewayUrl,
-          });
-        }
+        const requestDevelopment = c.mode === "clarification" && (startDevelopment || message.trim() === "开始开发");
+        if (requestDevelopment && !c.isClarification)
+          throw Object.assign(new Error("请在需求澄清会话中完成澄清并申请开始开发"), { status: 409 });
+        await request(`/sessions/${id}`, {
+          requirementId: r.id,
+          workspacePath: r.workspace_path,
+          model: c.model,
+          messages: c.context_messages,
+          gatewayUrl,
+        });
         watch(id);
-        const turnId = randomUUID();
-        await chats.begin(id, (skillNames.length ? `[Skill: ${skillNames.join(", ")}]\n` : "") + message, turnId);
+        const turnId = queuedTurnId || randomUUID();
+        if (queuedTurnId) {
+          const claimed = await sql`UPDATE turns SET status='running' WHERE id=${queuedTurnId} AND conversation_id=${id} AND status='queued'`;
+          if (!claimed.affectedRows) return { turnId };
+        } else {
+          await chats.begin(id, (skillNames.length ? `[Skill: ${skillNames.join(", ")}]\n` : "") + message, turnId);
+        }
         const spec = {
           original: r.original_description,
           clarified: r.clarified_description,
@@ -104,6 +125,8 @@ export function executorClient(url, chats, sql) {
             turnId,
             message,
             skillNames,
+            mode: c.mode,
+            requestDevelopment,
             ...(changed ? { requirement: spec } : {}),
           });
           knownSpecs.set(id, JSON.stringify(spec));
@@ -143,8 +166,11 @@ export function executorClient(url, chats, sql) {
     },
     async close() {
       closed = true;
+      clearInterval(queueTimer);
+      await queueTask;
       for (const w of watching.values()) w.controller.abort();
       await Promise.all([...watching.values()].map((w) => w.task));
     },
   };
+  return client;
 }

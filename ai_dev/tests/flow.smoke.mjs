@@ -1,6 +1,6 @@
 import { test, expect } from "bun:test";
 import path from "node:path";
-import { fixture, api } from "./helpers.mjs";
+import { fixture, api, completeClarification } from "./helpers.mjs";
 import { startExecutor } from "../backend/executor/http.mjs";
 import { startGateway } from "../backend/gateway/http.mjs";
 test("真实模型经网关修改需求代码并可预览", async () => {
@@ -23,6 +23,7 @@ test("真实模型经网关修改需求代码并可预览", async () => {
       originalDescription: "把首页标题改为 Forge works",
       repositoryPath: f.repo,
     });
+    await completeClarification(gw.url, r.id);
     const c = await api(gw.url, `/api/requirements/${r.id}/conversations`, {
       title: "真实开发",
     });

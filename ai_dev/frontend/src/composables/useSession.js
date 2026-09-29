@@ -40,11 +40,11 @@ export function useSession() {
       if (current === generation) error.value = e.message;
     }
   }
-  async function send(message, skillNames = []) {
+  async function send(message, skillNames = [], startDevelopment = false) {
     submitting.value = true;
     error.value = "";
     try {
-      await api(`/api/conversations/${id.value}/chat`, { message, skillNames });
+      await api(`/api/conversations/${id.value}/chat`, { message, skillNames, startDevelopment });
       return true;
     } catch (e) {
       error.value = e.message;

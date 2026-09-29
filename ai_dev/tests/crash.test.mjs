@@ -1,6 +1,6 @@
 import { test, expect } from "bun:test";
 import path from "node:path";
-import { fixture, api } from "./helpers.mjs";
+import { fixture, api, completeClarification } from "./helpers.mjs";
 import { modelServer } from "./model-server.mjs";
 import { startGateway } from "../backend/gateway/http.mjs";
 test("执行进程被终止后显示中断，继续时不重放旧请求", async () => {
@@ -40,11 +40,13 @@ test("执行进程被终止后显示中断，继续时不重放旧请求", async
       originalDescription: "测试",
       repositoryPath: f.repo,
     });
+    await completeClarification(gw.url, r.id);
+    const initialRequests = model.requests.length;
     const c = await api(gw.url, `/api/requirements/${r.id}/conversations`, {
       title: "A",
     });
     await api(gw.url, `/api/conversations/${c.id}/chat`, { message: "慢任务" });
-    for (let i = 0; i < 30 && !model.requests.length; i++) await Bun.sleep(20);
+    for (let i = 0; i < 30 && model.requests.length === initialRequests; i++) await Bun.sleep(20);
     proc.kill("SIGKILL");
     await proc.exited;
     await launch();
@@ -61,7 +63,7 @@ test("执行进程被终止后显示中断，继续时不重放旧请求", async
       await Bun.sleep(50);
     }
     expect(state.turns.at(-1).status).toBe("done");
-    expect(model.requests.length).toBe(2);
+    expect(model.requests.length).toBe(initialRequests + 2);
   } finally {
     await gw.close();
     proc.kill("SIGKILL");

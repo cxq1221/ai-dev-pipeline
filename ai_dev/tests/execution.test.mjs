@@ -1,6 +1,6 @@
 import { test, expect } from "bun:test";
 import path from "node:path";
-import { fixture, api } from "./helpers.mjs";
+import { fixture, api, completeClarification } from "./helpers.mjs";
 import { modelServer } from "./model-server.mjs";
 import { startExecutor } from "../backend/executor/http.mjs";
 import { startGateway } from "../backend/gateway/http.mjs";
@@ -34,6 +34,7 @@ test("网关下发新消息，执行结果和独立会话历史可查询", async
       originalDescription: "实现页面",
       repositoryPath: f.repo,
     });
+    await completeClarification(gw.url, req.id);
     const a = await api(gw.url, `/api/requirements/${req.id}/conversations`, {
       title: "A",
     });

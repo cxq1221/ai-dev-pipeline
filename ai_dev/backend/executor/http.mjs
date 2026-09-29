@@ -28,6 +28,7 @@ export async function startExecutor({
   const app = express();
   app.use(localOnly({ internal: true }));
   const sessions = new Map();
+  const sessionGateways = new Map();
   const workspaces = new Map();
   const preview = express();
   preview.get("/r/:id/{*file}", async (req, res) => {
@@ -81,7 +82,7 @@ export async function startExecutor({
           updateRequirement: target
             ? async (content) => {
                 const r = await fetch(
-                  `${target}/api/requirements/${req.body.requirementId}`,
+                  `${sessionGateways.get(req.params.id) || target}/api/requirements/${req.body.requirementId}`,
                   {
                     method: "PATCH",
                     headers: { "Content-Type": "application/json" },
@@ -93,6 +94,7 @@ export async function startExecutor({
             : undefined,
         }),
       );
+    if (target) sessionGateways.set(req.params.id, target);
     res.json({ ready: true });
   });
   app.get("/sessions/:id", (req, res) => {
@@ -100,9 +102,20 @@ export async function startExecutor({
     if (!s) return res.status(404).json({ error: "会话实例不存在" });
     res.json(s.state());
   });
-  app.post("/sessions/:id/chat", (req, res) =>
-    res.json(sessions.get(req.params.id).chat(req.body)),
-  );
+  app.post("/sessions/:id/chat", async (req, res) => {
+    const session = sessions.get(req.params.id);
+    if (!session) return res.status(404).json({ error: "会话实例不存在" });
+    const target = sessionGateways.get(req.params.id);
+    let input = req.body;
+    if (target) {
+      const response = await fetch(`${target}/api/conversations/${req.params.id}/mode`, { signal: AbortSignal.timeout(5000) });
+      if (!response.ok) throw new Error("无法核实需求阶段，请稍后重试");
+      const authorization = await response.json();
+      input = { ...input, mode: authorization.mode === "development" ? "development" : "clarification",
+        requestDevelopment: authorization.isClarification && (input.requestDevelopment === true || input.message?.trim() === "开始开发") };
+    }
+    res.json(session.chat(input));
+  });
   app.post("/sessions/:id/stop", async (req, res) =>
     res.json(await sessions.get(req.params.id).stop()),
   );
